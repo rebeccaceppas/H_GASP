@@ -218,6 +218,19 @@ def weight_upchan(cfu, M, U):
     # summation collapses shape back down to shape = (U, nfreq)
     return np.sum(summation, axis = 2) 
 
+def scaling(U):
+    '''pre-computed overal scaling factors'''
+    if U == 1: k = 1.216103148777748e-10
+    elif U == 2: k = 7.841991167761238e-11
+    elif U == 4: k = 3.195692185478832e-11
+    elif U == 8: k = 1.5098060514380606e-11
+    elif U == 16: k = 7.437551472089143e-12
+    elif U == 32: k = 3.701749876806638e-12
+    elif U == 64: k = 1.847847543734494e-12
+    return k
+
+############################# main computations ##############################
+
 def response_mtx(c, f, M, N, U):
     '''
     Calculates response matrix which can be multiplied against input frequencies 
@@ -270,7 +283,7 @@ def response_mtx(c, f, M, N, U):
     # returning the combined response matrix where coarse and fine channelization weights are multiplied
     return np.multiply(mtx_chan, mtx_upchan)
 
-def get_response_matrix(freqs, U, min_obs_freq , max_obs_freq, M=4, N=4096, viewmatrix=False):
+def get_response_matrix(freqs, U, min_freq , max_freq, M=4, N=4096, viewmtx=False):
     '''
     Generates the response matrix and the channels being observed on after up-channelization
     
@@ -280,7 +293,7 @@ def get_response_matrix(freqs, U, min_obs_freq , max_obs_freq, M=4, N=4096, view
       can be calculated using function get_fine_freqs
     - U: <int>   
       up-channelization factor, U = 2^n
-    - min_obs_freq, max_obs_freq: <float>
+    - min_freq, max_freq: <float>
       minimum and maximum frequencies to observe
       sets the observing range, determines coarse channels used
     - M: <int>
@@ -293,24 +306,31 @@ def get_response_matrix(freqs, U, min_obs_freq , max_obs_freq, M=4, N=4096, view
     Outputs
     - R: <array>
       response matrix, to be multiplied against profile for upchannelizing
-    - chans: <array> 
-      fine channel indices
+    - frequencies: <array> 
+      frequencies for each channel with response after up-channelization
     - norm: <array> 
       channelization envelope to be divided out of up-channelized profiles 
       to remove modulation
       '''
-    # setting the coarse channels
-    coarse_chans = get_chans(max_obs_freq, min_obs_freq)
+    # setting the coarse channels and retrieving the scaling factor
+    k = scaling(U)
+    coarse_chans = get_chans(max_freq, min_freq)
 
     # stripping units and reshaping frequencies and channels
     f = np.reshape(freq_unit_strip(freqs[::-1]), (freqs.size, 1))
     c = np.reshape(coarse_chans, (1, len(coarse_chans))).astype(int)
 
-    # generating response matrix - will eventually replace this step to simply load up the needed matrix file
+    # generating response matrix
     R = response_mtx(c, f, M, N, U)
+    chans = np.arange(c.min()-0.5 + 1/(2*U), c.max() + 0.5, 1/U) 
+    frequencies = freq_unit_add(chans)
+
+    # flat spectrum to get normalization vector
+    flat = np.ones_like(freqs)
+    norm_unscaled = np.matmul(np.abs(R)**2, flat[::-1])
 
     # visualizing the matrix:
-    if viewmatrix == True:
+    if viewmtx == True:
         plt.figure(figsize = (10, 6))
         plt.imshow(np.abs(R.real)**2, cmap = 'viridis', aspect='auto')
         plt.xlabel('Columns (f)')
@@ -318,83 +338,85 @@ def get_response_matrix(freqs, U, min_obs_freq , max_obs_freq, M=4, N=4096, view
         plt.colorbar()
         plt.show()
 
-    chans = np.arange(c.min()-0.5 + 1/(2*U), c.max() + 0.5, 1/U) 
-    chans = freq_unit_add(chans)
+    return R, frequencies, norm_unscaled * k
 
-    # flat spectrum to get normalization vector
-    flat = np.ones_like(freqs)
-    norm_unscaled = np.matmul(np.abs(R)**2, flat[::-1])
+############################# general usage ##############################
 
-    # retrieving overall scaling factors
-    if U == 1: k = 1.216103148777748e-10
-    elif U == 2: k = 7.841991167761238e-11
-    elif U == 4: k = 3.195692185478832e-11
-    elif U == 8: k = 1.5098060514380606e-11
-    elif U == 16: k = 7.437551472089143e-12
-    elif U == 32: k = 3.701749876806638e-12
-    elif U == 64: k = 1.847847543734494e-12
-
-    return R, chans, norm_unscaled * k
-
-
-
-def get_resampled_profiles(V, S, z, fine_freqs):
-    '''Takes opened galaxy catalogue and returns finely re-sampled profiles in frequency space.
-    Inputs:
-        V, S (np.ndarray): velocity and flux obtained from read_catalogue function.
-        nfreq (int): number of frequency points to be returned after re-sampling.
-        midfreq (int): frequency at which to center the galaxy profiles
-    Outputs: 
-        freqs (np.ndarray): array of frequencies at which all profiles are sampled
-        profiles (np.ndarray): the galaxy profiles from the catalogue '''
+def upchannelize(spectra, U, R_path, norm_path, freq_path):
+    '''
+    Up-channelizes input spectra to get response on every channel
     
-    # instantiating array to hold profiles
-    resampled_profiles = np.zeros((len(S), len(fine_freqs)))
-
-    # converting the units
-    profile = GalaxyCatalog(V, S, z)
-
-    for i in range(len(V)):
-
-        new_prof = np.interp(fine_freqs, profile.obs_freq[i][::-1], profile.T[i][::-1]) 
-        resampled_profiles[i] = new_prof
-
-    # outputs them from high to low freq
-    return resampled_profiles
-
-
-
-def upchannelize(profiles, U, R_filepath, norm_filepath):
-    ''' Upchannelizes input profiles to get response on every channel
-    Inputs:
-        profiles (np.ndarray): profiles to be channelized, generated by get_resampled_profiles function
-        U (int): upchannelization factor, # of fine channels per coarse channel
-        R_filepath, norm_filepath (str): filepaths for outputs from get_response_matrix
+    Inputs
+    - spectra: <array>
+      shape is (# of spectra, # of frequencies) or # of frequencies for single input
+      spectra to be up-channelized
+      must correspond to the same frequency range as the one used to compute 
+      R and norm in get_response_matrix
+    - U: <int>
+      up-channelization factor, U = 2^n
+    - R_path, norm_path, freq_path: <str>
+      paths to response matrix R, normalization vector norm,
+      and output frequencies from get_response_matrix
         
-    Outputs: 
-        heights (np.ndarray): channelized profiles, index corresponds to profile # '''
-    heights = []
+    Outputs
+    - responses: <array>
+      up-channelized spectra
+      shape is (# spectra, U x # coarse channels)
+    - frequencies: <array>
+      frequencies for each channel with response after up-channelization
+    '''
+    responses = []
 
-    # loading in R, norm, and chans
-    R = np.load(R_filepath)
-    norm = np.load(norm_filepath)
+    # loading in R, norm, and scaling factor
+    R = np.load(R_path)
+    norm = np.load(norm_path)
+    frequencies = np.load(freq_path)
+    k = scaling(U)
 
-    # getting response for each profile
-    for i in range(len(profiles)):
-        response = np.matmul(np.abs(R)**2, profiles[i][::-1])
+    spectra = np.array(spectra)
+    dimensions = spectra.ndim
 
-        if U == 1: k = 1.216103148777748e-10
-        elif U == 2: k = 7.841991167761238e-11
-        elif U == 4: k = 3.195692185478832e-11
-        elif U == 8: k = 1.5098060514380606e-11
-        elif U == 16: k = 7.437551472089143e-12
-        elif U == 32: k = 3.701749876806638e-12
-        elif U == 64: k = 1.847847543734494e-12
+    # if more than one spectrum, get response for each separately
+    if dimensions > 1:
+        for i in range(len(spectra)):
+            r = np.matmul(np.abs(R)**2, spectra[i][::-1])
+            responses.append(np.array(r * k / norm))
+    else:
+        r = np.matmul(np.abs(R)**2, spectra[::-1])
+        responses = np.array(r * k / norm)
+    return responses, frequencies
 
-        # removing ripples and scaling to correct height
-        heights.append(np.array(response * k / norm))
+############################# application: up-channelizing healpix map ##############################
 
-    return heights
+def channelize_map(U, fstate, map_path, R_path, norm_path, freq_path, fine_freqs, save_title):
+    ''' Opening map '''
+    f = h5py.File(map_path)
+    Map = np.array(f['map'])  # the healpix map
+    idx = f['index_map']
+    ff = np.array(idx['freq'])
+    freqs = np.array([ii[0] for ii in ff])  # the frequencies of each slice
+    f.close()
+
+    ''' re-sampling each pixel '''
+    pixels = []
+    npix = Map.shape[2]
+    for i in range(npix):
+        func = interpolate.interp1d(freqs, Map[:, 0, i], fill_value='extrapolate')
+        pixels.append(func(fine_freqs))
+
+    heights = upchannelize(pixels, U, R_path, norm_path, freq_path)
+
+    nfreq = fstate.frequencies.size
+    npol = 4
+    map_ = np.zeros((nfreq, npol, npix), dtype=np.float64)
+
+    for i in range(len(heights)):
+        map_[:, 0, i] = np.flip(heights[i])
+
+    write_map(save_title, map_, fstate.frequencies, fstate.freq_width, include_pol=True)
+
+
+############################# application: up-channelizing catalog of galaxy profiles ##############################
 
 def read_catalogue(file):
     '''Function to open the galaxy catalogue and retrieve velocity and flux readings'''
@@ -430,6 +452,31 @@ def read_catalogue(file):
 
     return V, S, z, ra, dec
 
+def get_resampled_profiles(V, S, z, fine_freqs):
+    '''Takes opened galaxy catalogue and returns finely re-sampled profiles in frequency space.
+    Inputs:
+        V, S (np.ndarray): velocity and flux obtained from read_catalogue function.
+        nfreq (int): number of frequency points to be returned after re-sampling.
+        midfreq (int): frequency at which to center the galaxy profiles
+    Outputs: 
+        freqs (np.ndarray): array of frequencies at which all profiles are sampled
+        profiles (np.ndarray): the galaxy profiles from the catalogue '''
+    
+    # instantiating array to hold profiles
+    resampled_profiles = np.zeros((len(S), len(fine_freqs)))
+
+    # converting the units
+    profile = GalaxyCatalog(V, S, z)
+
+    for i in range(len(V)):
+
+        new_prof = np.interp(fine_freqs, profile.obs_freq[i][::-1], profile.T[i][::-1]) 
+        resampled_profiles[i] = new_prof
+
+    # outputs them from high to low freq
+    return resampled_profiles
+
+
 def channelize_catalogue(U, fstate, nside, catalogue_filepath, R_filepath, norm_filepath, fine_freqs, save_title):
     # getting velocity and flux from catalogue
     V, S, z, ra, dec = read_catalogue(catalogue_filepath)
@@ -445,31 +492,6 @@ def channelize_catalogue(U, fstate, nside, catalogue_filepath, R_filepath, norm_
 
     return heights
 
-def channelize_map(U, fstate, map_filepath, R_filepath, norm_filepath, fine_freqs, save_title):
-    ''' Opening map '''
-    f = h5py.File(map_filepath)
-    Map = np.array(f['map'])  # the healpix map
-    idx = f['index_map']
-    ff = np.array(idx['freq'])
-    freqs = np.array([ii[0] for ii in ff])  # the frequencies of each slice
-    f.close()
 
-    ''' re-sampling each pixel '''
-    pixels = []
-    npix = Map.shape[2]
-    for i in range(npix):
-        func = interpolate.interp1d(freqs, Map[:, 0, i], fill_value='extrapolate')
-        pixels.append(func(fine_freqs))
-
-    heights = upchannelize(pixels, U, R_filepath, norm_filepath)
-
-    nfreq = fstate.frequencies.size
-    npol = 4
-    map_ = np.zeros((nfreq, npol, npix), dtype=np.float64)
-
-    for i in range(len(heights)):
-        map_[:, 0, i] = np.flip(heights[i])
-
-    write_map(save_title, map_, fstate.frequencies, fstate.freq_width, include_pol=True)
 
 
