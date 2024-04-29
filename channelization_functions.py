@@ -1,3 +1,5 @@
+# Code developed with Olivia Pereira #
+
 import numpy as np
 import numexpr as ne 
 import matplotlib.pyplot as plt
@@ -8,15 +10,129 @@ from FreqState import FreqState
 from save_galaxy_map import write_map, map_catalog
 from scipy import interpolate
 
-def window(index, M, length): # window function
-    '''(array, int, int) -> (array)
-    Passes an array of summation indices through a sinc-hanning window function'''
-    return (np.cos(np.pi * (index-M*length/2)/(M*length-1)))**2 * np.sinc((index-M*length/2)/length)
+############################# helper functions ##############################
+
+
+def freq_unit_strip(f, fmin=300, N=4096, t0=0.417):
+    '''
+    Strips quantities in frequency-space to become unitless
+    
+    Inputs
+    - f: <array>
+      array of frequencies in MHz
+    - fmin: <float>
+      minimum instrumental frequency. default is CHORD's 300 MHz
+    - N: <int>
+      2*number of channels. default is CHORD's 4096
+    - t0: <float>
+      time stream sampling rate in ns. default is CHORD's 0.417 ns
+
+    Outputs
+    - f_bar: <array>
+      unitless frequency array
+    '''
+    f_bar = (f - fmin) * N * t0 * 0.001
+    return f_bar
+
+def freq_unit_add(f_bar, fmin=300, N=4096, t0=0.417):
+    '''
+    Adds frequency units (MHz) to unitless quantities
+    
+    Inputs
+    - f_bar: <array>
+      array of unitless frequencies
+    - fmin: <float>
+      minimum instrumental frequency. default is CHORD's 300 MHz
+    - N: <int>
+      2*number of channels. default is CHORD's 4096
+    - t0: <float>
+      time stream sampling rate in ns. default is CHORD's 0.417 ns
+
+    Outputs
+    - f: <array>
+      frequency array with units of MHz
+    '''
+    f = f_bar / (N * t0 * 0.001) + fmin
+    return f
+
+def get_chans(fmax_chan, fmin_chan, fmin=300, N=4096, t0=0.417):
+    '''
+    Gets the coarse channel indices for a range of observed frequencies given
+    some telescope sampling and spectral properties.
+    
+    Inputs
+    - fmax_chan: <float>
+      maximum frequency to consider for channels in MHz
+    - fmin_chan: <float>
+      minimum observed frequency to consider for channels in MHz
+    - fmin: <float>
+      minimum instrumental frequency. default is CHORD's 300 MHz
+    - N: <int>
+      2*number of channels. default is CHORD's 4096
+    - t0: <float>
+      time stream sampling rate in ns. default is CHORD's 0.417 ns
+
+    Outputs
+    - array corresponding to the coarse channel indices
+      for the chosen frequency range and instrumental parameters
+    '''
+    min_chan = np.floor(freq_unit_strip(fmin_chan, fmin, N, t0))
+    max_chan = np.ceil(freq_unit_strip(fmax_chan, fmin, N, t0))
+    return np.arange(min_chan, max_chan + 1)
+
+def get_fine_freqs(f):
+    '''
+    Helper function to get fine frequencies 
+    for resampling spectra before up-channelization.
+    It adds some padding and makes the resolution 3 times finer.
+
+    Inputs
+    - f: <array>
+      frequencies in MHz in descending order (max to min)
+
+    Outputs
+    - finer frequencies within that range for up-channelization
+    '''
+    fmax = np.max(f)+2
+    fmin = np.min(f)-2
+    dc = f[1] - f[0]  # getting a negative dc 
+    return np.arange(fmax, fmin, dc / 3) 
+
+def window(index, M, N):
+    '''
+    Sinc-Hanning window function
+
+    Inputs
+    ------
+    - index: <array of int>
+    - M: <int>
+      number of taps
+    - N: <int>
+      2*number of channels
+
+    Outputs
+    -------
+    - W: <array>
+      Sinc-Hanning windown function 
+    '''
+    W = (np.cos(np.pi * (index-M*N/2)/(M*N-1)))**2 * np.sinc((index-M*N/2)/N)
+    return W
 
 def exponential_chan(s, mtx, N): 
-    '''(array, array, int) -> array
-    Passes an array (matrix) which needs to be modified and exponentiated'''
+    '''
+    Calculates exponential term of first-round PFB
 
+    Inputs
+    - s: <array>
+      indices for summation
+    - mtx: <array>
+      matrix containing (c - f)
+    - N:
+      2*number of channels
+
+    Outputs
+    - exponential e^(-2*i*pi*mtx*s/N)
+    '''
     # reshaping (coarse chans, nfreq) -> (coarse chans, nfreq, 1)
     mtx = np.reshape(mtx, (mtx.shape[0], mtx.shape[1], 1))
 
@@ -26,17 +142,30 @@ def exponential_chan(s, mtx, N):
     exponent = -2j * np.pi * v / N
     return ne.evaluate("exp(exponent)")
 
-def weight_chan(f, M, N): 
-    '''(array, int, int) -> array
-    Takes an array containing (c-f) entries and passes it through a first-round PFB''' 
+def weight_chan(cf, M, N): 
+    '''
+    First-round PFB channelization
+    
+    Inputs
+    ------
+    - cf: <array>
+      entries are c - f for relevant channels c and frequencies f
+    - M: <int>
+      number of taps
+    - N: <int>
+      2*number of channels
 
+    Outputs
+    -------
+    array of shape (N, nfreq) containing the first-round PFB output
+    ''' 
     # creating an array containing the indices over which we need to sum the DFT over 
     # shape = (1, M*N)
     j = np.reshape(np.arange(M*N), (1, M*N)) 
 
     # getting the window function and exponential bit of the DFT to be multiplied together
     # result has shape (coarse chans, nfreq, M*N)
-    summation = window(j, M, N) * exponential_chan(j, f, N)
+    summation = window(j, M, N) * exponential_chan(j, cf, N)
 
     # collapsing so it has shape (coarse chans, nfreq) again
     return np.sum(summation, axis = 2)
@@ -54,16 +183,31 @@ def exponential_upchan(B, k):
     exponent = np.pi * 1j * v
     return ne.evaluate("exp(exponent)")
 
-def weight_upchan(B, M, U):
-    '''(array, int, int) -> array
-    Takes an array containing ((U-1)/U - 2u/U + 2f) entries and passes it through first-round PFB''' 
+def weight_upchan(cfu, M, U):
+    '''
+    Second-round PFB channelization
+    
+    Inputs
+    ------
+    - cfu: <array>
+      entries are c - f for relevant fine channels u and frequencies f in coarse channels c
+      has ((U-1)/U - 2u/U + 2f) entries
+    - M: <int>
+      number of taps
+    - U: <int>
+      up-channelization factor, U = 2^n.
+
+    Outputs
+    -------
+    array of shape (U, nfreq) containing the second-round PFB output
+    ''' 
 
     # creating an array containing the indices over which we need to sum the DFT over, shape = (1, M*U)
     k = np.reshape(np.arange(M*U), (1, M*U))
 
     # getting window function and exponential bit of the DFT which need to be multiplied together
     # result has shape (coarse chans, nfreq, M*U)
-    summation = window(k, M, U) * exponential_upchan(B, k)
+    summation = window(k, M, U) * exponential_upchan(cfu, k)
 
     # summation collapses shape back down to shape = (U, nfreq)
     return np.sum(summation, axis = 2) 
@@ -108,28 +252,7 @@ def response_mtx(c, f, M, N, U):
     # returning the combined response matrix where coarse and fine channelization weights are multiplied
     return np.multiply(mtx_chan, mtx_upchan)
 
-def freq_unit_strip(f):
-    '''strips quantities in frequency-space (MHz) to become unitless'''
-    return (f - 300) * 4096 * 0.417 * 0.001
 
-def freq_unit_add(f_bar):
-    '''adds frequency units (MHz) to unitless quantities'''
-    return f_bar / (4096 * 0.417 * 0.001) + 300
-
-def get_fine_freqs(observing_freqs):
-    fmax = np.max(observing_freqs)+2
-    fmin = np.min(observing_freqs)-2
-    dc = observing_freqs[1] - observing_freqs[0]  # getting a negative dc 
-    return np.arange(fmax, fmin, dc / 3) # making the frequency resolution = 1/3 dc 
-
-def get_chans(min_freq, max_freq):
-    '''(int/float, int/float) -> (array)
-    Takes a minimum and maximum observing frequency and returns the appropriate corresponding 
-    coarse channels for CHORD'''
-    min_chan = np.floor(freq_unit_strip(min_freq))
-    max_chan = np.ceil(freq_unit_strip(max_freq))
-
-    return np.arange(min_chan, max_chan + 1)
 
 def read_catalogue(file):
     '''Function to open the galaxy catalogue and retrieve velocity and flux readings'''
