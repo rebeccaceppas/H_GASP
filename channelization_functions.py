@@ -388,8 +388,26 @@ def upchannelize(spectra, U, R_path, norm_path, freq_path):
 
 ############################# application: up-channelizing healpix map ##############################
 
-def channelize_map(U, fstate, map_path, R_path, norm_path, freq_path, fine_freqs, save_title):
-    ''' Opening map '''
+def channelize_map(U, map_path, R_path, norm_path, freq_path, fine_freqs, output_path):
+    '''
+    Up-channelizes an entire healpix map
+    Works for the file formats of the existing CHORD pipeline
+
+    Inputs
+    - U: <int>
+      up-channelization factor, U = 2^n
+    - R_path, norm_path, freq_path: <str>
+      paths to response matrix R, normalization vector norm,
+      and output frequencies from get_response_matrix
+    - fine_freqs: <array>
+      large number of frequencies to simulate continuous 'real' spectrum
+      calculated using function get_fine_freqs
+    - output_path: <str>
+      filename and path to save the new up-channelized map
+      should be a .h5 file
+    '''
+
+    # loading original map 
     f = h5py.File(map_path)
     Map = np.array(f['map'])  # the healpix map
     idx = f['index_map']
@@ -397,24 +415,27 @@ def channelize_map(U, fstate, map_path, R_path, norm_path, freq_path, fine_freqs
     freqs = np.array([ii[0] for ii in ff])  # the frequencies of each slice
     f.close()
 
-    ''' re-sampling each pixel '''
+    # re-sampling each pixel to the fine frequencies
     pixels = []
     npix = Map.shape[2]
     for i in range(npix):
         func = interpolate.interp1d(freqs, Map[:, 0, i], fill_value='extrapolate')
         pixels.append(func(fine_freqs))
 
-    heights = upchannelize(pixels, U, R_path, norm_path, freq_path)
+    # up-channelizing
+    responses, frequencies = upchannelize(pixels, U, R_path, norm_path, freq_path)
 
-    nfreq = fstate.frequencies.size
+    nfreq = len(frequencies)
+    fwidth = np.abs(frequencies[0] - frequencies[1])
     npol = 4
     map_ = np.zeros((nfreq, npol, npix), dtype=np.float64)
 
-    for i in range(len(heights)):
-        map_[:, 0, i] = np.flip(heights[i])
+    # injecting up-channelized spectra back into the map pixel by pixel
+    for i in range(len(responses)):
+        map_[:, 0, i] = np.flip(responses[i])
 
-    write_map(save_title, map_, fstate.frequencies, fstate.freq_width, include_pol=True)
-
+    # we flip the response and frequencies so the slices go from high to low frequency
+    write_map(output_path, map_, np.flip(frequencies), fwidth, include_pol=True)
 
 ############################# application: up-channelizing catalog of galaxy profiles ##############################
 
@@ -491,7 +512,3 @@ def channelize_catalogue(U, fstate, nside, catalogue_filepath, R_filepath, norm_
     map_catalog(fstate, np.flip(heights, axis=1), nside, pol, ra, dec, filename=save_title, write=True)
 
     return heights
-
-
-
-
