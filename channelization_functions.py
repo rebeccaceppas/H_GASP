@@ -405,6 +405,9 @@ def channelize_map(U, map_path, R_path, norm_path, freq_path, fine_freqs, output
     - output_path: <str>
       filename and path to save the new up-channelized map
       should be a .h5 file
+
+    Outputs
+    - produces and saves up-channelized map to output_path
     '''
 
     # loading original map 
@@ -437,78 +440,114 @@ def channelize_map(U, map_path, R_path, norm_path, freq_path, fine_freqs, output
     # we flip the response and frequencies so the slices go from high to low frequency
     write_map(output_path, map_, np.flip(frequencies), fwidth, include_pol=True)
 
-############################# application: up-channelizing catalog of galaxy profiles ##############################
+############################# application: up-channelizing catalogue of galaxy profiles ##############################
 
 def read_catalogue(file):
     '''Function to open the galaxy catalogue and retrieve velocity and flux readings'''
-    # Read Catalog:
-    Catalog = np.loadtxt(file)
+    # Read Catalogue:
+    Catalogue = np.loadtxt(file)
 
     # Galaxy parameters:
-    MHI = Catalog[0]      # HI Mass - SolMass
-    VHI = Catalog[1]      # HI Velocity - km/s
-    i = Catalog[2]        # inclination - radians
-    D = Catalog[3]        # Distance - Mpc
-    W50 = Catalog[4]      # FWHM width - km/s
-    z = Catalog[5]        # Redshift 
-    ra = Catalog[6]       # Right Ascension - Degrees
-    dec = Catalog[7]      # Declination - Degrees
+    MHI = Catalogue[0]      # HI Mass - SolMass
+    VHI = Catalogue[1]      # HI Velocity - km/s
+    i = Catalogue[2]        # inclination - radians
+    D = Catalogue[3]        # Distance - Mpc
+    W50 = Catalogue[4]      # FWHM width - km/s
+    z = Catalogue[5]        # Redshift 
+    ra = Catalogue[6]       # Right Ascension - Degrees
+    dec = Catalogue[7]      # Declination - Degrees
 
     # Busy function parameters:
-    a = Catalog[8]        # Controls peak 
-    b1 = Catalog[9]       # Controls height of one peak in double-peak profile
-    b2 = Catalog[10]      # Controls height of other peak in double-peak profile
-    c = Catalog[11]       # Controls depth of trough
+    a = Catalogue[8]        # Controls peak 
+    b1 = Catalogue[9]       # Controls height of one peak in double-peak profile
+    b2 = Catalogue[10]      # Controls height of other peak in double-peak profile
+    c = Catalogue[11]       # Controls depth of trough
 
-    ## Generate all Spectra from points in catalog into one array V velocity and S flux:
-    sample_size = len(Catalog[0])
-    Mfound = []; V = []; S = []; W = []; Wroots = []
+    # Generate all Spectra from points in catalogue into one array V velocity and S flux:
+    sample_size = len(Catalogue[0])
+    V = []; S = []
     for j in range(sample_size):
-        try_M, v, s, w, w_, _, _, _, _ = g.Generate_Spectra(MHI[j], VHI[j], i[j], D[j], a=a[j], b1=b1[j], b2=b2[j], c=c[j])
-        Mfound.append(try_M)
+        _, v, s, _, _, _, _, _, _ = g.Generate_Spectra(MHI[j], 
+                                                            VHI[j], 
+                                                            i[j], 
+                                                            D[j], 
+                                                            a=a[j], b1=b1[j], b2=b2[j], c=c[j])
         V.append(v)
         S.append(s)
-        W.append(w)
-        Wroots.append(w_)
 
     return V, S, z, ra, dec
 
 def get_resampled_profiles(V, S, z, fine_freqs):
-    '''Takes opened galaxy catalogue and returns finely re-sampled profiles in frequency space.
-    Inputs:
-        V, S (np.ndarray): velocity and flux obtained from read_catalogue function.
-        nfreq (int): number of frequency points to be returned after re-sampling.
-        midfreq (int): frequency at which to center the galaxy profiles
-    Outputs: 
-        freqs (np.ndarray): array of frequencies at which all profiles are sampled
-        profiles (np.ndarray): the galaxy profiles from the catalogue '''
+    '''
+    Re-samples profiles finely in frequency space
     
+    Inputs
+    - V, S: <array>
+      velocity (km/s) and flux (mJy) obtained from read_catalogue function
+    - z: <array>
+      redshifts of all sources in the catalogue
+    - fine_freqs: <array>
+      large number of frequencies to simulate continuous 'real' spectrum
+      calculated using function get_fine_freqs
+      
+    Outputs
+    - resampled_profiles: <array>
+    all galaxy profiles from the catalogue resampled at the fine frequencies 
+    in K per MHz channel)
+    '''
     # instantiating array to hold profiles
     resampled_profiles = np.zeros((len(S), len(fine_freqs)))
 
-    # converting the units
+    # converting km/s -> MHz given z and mJy -> MHz
+    # outputs them from high to low freq
     profile = GalaxyCatalog(V, S, z)
 
     for i in range(len(V)):
-
         new_prof = np.interp(fine_freqs, profile.obs_freq[i][::-1], profile.T[i][::-1]) 
         resampled_profiles[i] = new_prof
 
-    # outputs them from high to low freq
-    return resampled_profiles
+    return resampled_profiles 
 
+def channelize_catalogue(U, fstate, nside, catalogue_path, R_path, norm_path, freq_path, fine_freqs, output_path):
+    '''
+    Up-channelized the profiles from a galaxy catalog
 
-def channelize_catalogue(U, fstate, nside, catalogue_filepath, R_filepath, norm_filepath, fine_freqs, save_title):
+    Inputs
+    - U: <int>
+      up-channelization factor, U = 2^n
+    - fstate: <FreqState object>
+      object containing the frequency specifications for the
+      up-channelized profiles
+    - nside: <int>
+      specifies the resolution of the healpix map produced, nside = 2^m
+    - catalogue_path: <str>
+      path to the desired galaxy catalog
+    - R_path, norm_path, freq_path: <str>
+      paths to response matrix R, normalization vector norm,
+      and output frequencies from get_response_matrix
+    - fine_freqs: <array>
+      large number of frequencies to simulate continuous 'real' spectrum
+      calculated using function get_fine_freqs
+    - output_path: <str>
+      filename and path to save the new up-channelized map
+      should be a .h5 file
+
+    Outputs
+    - produces and saves up-channelized map to output_path
+    - responses: <array>
+      up-channelized profiles
+      shape is (# profiles in catalogue, U x # coarse channels)
+    '''
+    
     # getting velocity and flux from catalogue
-    V, S, z, ra, dec = read_catalogue(catalogue_filepath)
+    V, S, z, ra, dec = read_catalogue(catalogue_path)
 
     # resampling and converting into profiles in frequency space
     profiles = get_resampled_profiles(V, S, z, fine_freqs)
 
-    # generating heights
-    heights = upchannelize(profiles, U, R_filepath, norm_filepath)
-
+    # generating responses
+    responses = upchannelize(profiles, U, R_path, norm_path, freq_path)
     pol = 'full'
-    map_catalog(fstate, np.flip(heights, axis=1), nside, pol, ra, dec, filename=save_title, write=True)
+    map_catalog(fstate, np.flip(responses, axis=1), nside, pol, ra, dec, filename=output_path, write=True)
 
-    return heights
+    return np.flip(responses)
