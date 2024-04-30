@@ -1,15 +1,14 @@
+## Code snipet modified from radiocosmology package https://github.com/radiocosmology ##
+
 import numpy as np
 
-
 class FreqState(object):
-    """Process and store the frequency spec from the command line.
-    Note: removed the options class method 
-    -- I didn't ever use it and also couldn't find where ListOfType and click came from."""
+    """Process and store frequency properties."""
 
     def __init__(self):
 
-        # Set the CHIME band as the internal default
-        self.freq = (800.0, 400.0, 1025)
+        # Set the CHORD band as the internal default
+        self.freq = (1500.0, 300.0, 2048)
 
         self.channel_range = None
         self.channel_list = None
