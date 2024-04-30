@@ -1,4 +1,4 @@
-
+## Code written by Akanksha Bij ##
 ## This script generates a random HI spectrum, for a given:
 ##        1. HI mass         (MHI in SolMass)
 ##        2. Velocity width  (VHI in km/s) 
@@ -93,7 +93,6 @@ def Generate_Spectra(MHI, VHI, i, D, a=None, b1=None, b2=None, c=None, w=1, n=2,
         while try_M < MHI:
             B = Busy_general(x=e, a=1, b1=b1, b2=b2, xe=xe, xp=xp, c=c, w=w, n=n) 
             V, S, W_ = assign_units(e, B, W, peak_S=a)
-            #print(S)
             try_M = get_MHI(V, S, D) # Check if you can just scale integral rather than re-integrating, it will re-introduce
             a = a + 0.5 # change increment to change accuracy vs speed
         # The try_M approximates M_HI to 2-3 significant figures -> improve this later
@@ -103,9 +102,6 @@ def Generate_Spectra(MHI, VHI, i, D, a=None, b1=None, b2=None, c=None, w=1, n=2,
         B = Busy_general(x=e, a=1, b1=b1, b2=b2, xe=xe, xp=xp, c=c, w=w, n=n)
         V, S, W_ = assign_units(e, B, W, peak_S=a)
         try_M = get_MHI(V, S, D)
-        # print(S)
-        # print(a)
-        # print(try_a)
 
     # Add thermal broadening to Busy Function:
     FWHM = 10
@@ -116,7 +112,3 @@ def Generate_Spectra(MHI, VHI, i, D, a=None, b1=None, b2=None, c=None, w=1, n=2,
     S_broad = fftconvolve(S, unitG, mode='same') * delta 
     
     return try_M, V, S_broad, W, W_, a, b1, b2, c
-
-#######################################################
-
-# See Example_Run.py on how to use
