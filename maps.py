@@ -3,21 +3,152 @@ import h5py
 import healpy as hp
 from scipy import stats as ss
 
-def sample_profile(fstate, gal_freqs, gal_signal, catalog=False):
+from FreqState import FreqState
+import Generate_HI_Spectra as g
+import channelization_functions as cf
 
-    """samples the profile bases on frequencies of beam/map
+
+def inject_synthesized_beam(ra, dec, 
+                            f_start=1418, f_end=1417, nfreq=2, 
+                            nside=512, filename=None):
+
+    '''Injects a source in a map for simulating synthesized beams with dirty map maker
+
+    Inputs:
+    ------
+    - ra: <float>
+      right ascension in degrees
+    - dec: <float>
+      declination in degrees
+
+    Outputs:
+    -------
+    '''
+
+    fstate = FreqState()
+    fstate.freq = (f_start, f_end, nfreq)
+
+    binned_temps = np.ones(nfreq)
+
+    pol='full'
+
+    if filename is None:
+        filename = 'input_RA{0:.2f}_DEC{0:.2f}.h5'.format(ra, dec)
+
+    map_input = make_map(fstate,
+                         binned_temps,
+                         nside, pol,
+                         ra, dec,
+                         write=True,
+                         filename=filename,
+                         new=True, existing_map=None)
+
+    return map_input
     
-    Parameters:
-    - fstate <object>= FreqState()
-    - gal_freqs <array>: array containing the finely sampled frequencies of the ideal profiles
-                         given from GalaxyProfile obs_freq method
-    - gal_signal <array>: array containing the temperatures at the finely sampled frequencies of the ideal profiles
-                          given from GalaxyProfile .T method
 
-    Returns:
-    - binned_T <array>: temperature signal at each of the binner frequency intervals
-     """
+def inject_ngals(R_filepath, 
+                 norm_filepath, 
+                 filename,
+                 ngals='all',
+                 save_gal_info=False, 
+                 f_start=1420.276874203762, 
+                 f_end=1369.3410603548411, 
+                 nfreq=1392, 
+                 U=16, 
+                 nside=512, 
+                 catalogue_filepath='/home/rebeccac/scratch/thesis/input_maps/ConstrainSim_dec45.txt'):
+    
+    '''Inject ngals out of the catalog
+    This is for the 2D matched filted to test with multiple Ngal
+    The input map will also be used for CLEAN
+    
+    Note: the maximum for the ALFALFA constrained catalog is ~3,500
+    Note2: the catalogs will be upchannelized
 
+    Inputs
+    ------
+    - ngals: <int> or <str: "all">
+    '''
+
+    fstate = FreqState()
+    fstate.freq = (f_start, f_end, nfreq)
+
+    fine_freqs = cf.get_fine_freqs(fstate.frequencies)
+    
+    # Read Catalog:
+    Catalog = np.loadtxt(catalogue_filepath)
+
+    # Galaxy parameters:
+    MHI = Catalog[0]      # HI Mass - SolMass
+    VHI = Catalog[1]      # HI Velocity - km/s
+    i = Catalog[2]        # inclination - radians
+    D = Catalog[3]        # Distance - Mpc
+    z = Catalog[5]        # Redshift 
+    ra = Catalog[6]       # Right Ascension - Degrees
+    dec = Catalog[7]      # Declination - Degrees
+
+    # Busy function parameters:
+    a = Catalog[8]        # Controls peak 
+    b1 = Catalog[9]       # Controls height of one peak in double-peak profile
+    b2 = Catalog[10]      # Controls height of other peak in double-peak profile
+    c = Catalog[11]       # Controls depth of trough
+
+    ## Generate all Spectra from points in catalog into one array V velocity and S flux:
+    sample_size = len(Catalog[0])
+    if isinstance(ngals, int):
+        galaxies_sample = np.random.choice(range(sample_size), ngals, replace=False)
+        
+    else:
+        galaxies_sample = range(sample_size)
+
+    if save_gal_info:
+        np.save('{}_galaxy_sample.npy'.format(filename), galaxies_sample)
+
+
+    # generating their spectra
+    V = []; S = []
+    for j in galaxies_sample:
+        try_M, v, s, w, w_, _, _, _, _ = g.Generate_Spectra(MHI[j], VHI[j], 
+                                                            i[j], D[j], 
+                                                            a=a[j], b1=b1[j], 
+                                                            b2=b2[j], c=c[j])
+    V.append(v)
+    S.append(s)
+
+    profiles = cf.get_resampled_profiles(V, S, z, fine_freqs)
+
+    # upchannelizing
+    heights = cf.upchannelize(profiles, U, R_filepath, norm_filepath)
+
+    pol = 'full'
+    map_catalog(fstate, np.flip(heights, axis=1), nside, pol, ra, dec, filename='{}_input_map.h5'.format(filename), write=True)
+
+    return 0
+
+
+
+
+
+
+def sample_profile(fstate, gal_freqs, gal_signal):
+    '''
+    Samples quasi-continuous (very finely sampled) profile to the desired 
+    frequency resolution as given in fstate
+
+    Inputs
+    - fstate: <object>
+      frequency specifications object from FreqState()
+    - gal_freqs: <array> 
+      finely sampled frequencies of the ideal profiles
+      given from GalaxyCatalog obs_freq property
+    - gal_signal: <array>
+      temperatures at the finely sampled frequencies of the ideal profiles
+      given from GalaxyCatalog T property
+
+    Outputs
+    - binned_Ts: <array>
+      sampled temperatures corresponding to fstate
+    '''
     bin_centres = np.flip(fstate.frequencies)
     bin_edges = bin_centres + fstate.freq_width/2
     bin_edges = np.append(bin_centres[0] - fstate.freq_width/2, bin_edges)
@@ -26,28 +157,15 @@ def sample_profile(fstate, gal_freqs, gal_signal, catalog=False):
     num_gals = gal_freqs.shape[0]
     
     binned_Ts = np.ones((num_gals, num_freqs))
-    if catalog:
-        for i, f in enumerate(gal_freqs):
-            T_, _, _ = ss.binned_statistic(f,
-                                           gal_signal[i],
-                                           statistic='mean',
-                                           bins=bin_edges)
 
-            T_ = np.nan_to_num(T_)
+    for i, f in enumerate(gal_freqs):
+        T_, _, _ = ss.binned_statistic(f,
+                                        gal_signal[i],
+                                        statistic='mean',
+                                        bins=bin_edges)
 
-            binned_Ts[i] = np.flip(T_)
-
-
-    else:
-        binned_Ts, _, _ = ss.binned_statistic(gal_freqs, 
-                                         gal_signal,
-                                         statistic='mean',
-                                         bins=bin_edges)
-    
-        binned_Ts = np.flip(np.nan_to_num(binned_Ts))
-
-    # flipping the array so that it shows the variation as the frequency decreases 
-    # matched what we do in the map making, make sure I'm not flipping there again
+        T_ = np.nan_to_num(T_)
+        binned_Ts[i] = np.flip(T_)
 
     return binned_Ts
 
@@ -125,7 +243,6 @@ def make_map(fstate, temp, nside, pol, ra, dec, write=False, filename=None, new=
     return map_
 
 def map_catalog(fstate, temp, nside, pol, ras, decs, filename=None, write=True):
-
     """
     Creates a map containing the given HI galaxy catalog specifications
     New function due to the fact that cannot seem to install healpy on cedar
@@ -157,42 +274,6 @@ def map_catalog(fstate, temp, nside, pol, ras, decs, filename=None, write=True):
         T = temp[i]
         for j in range(nfreq):
             map_[j, 0, hp.ang2pix(nside, ra, dec, lonlat=True)] += T[j]
-
-    if write:
-        write_map(filename, map_, fstate.frequencies, fstate.freq_width, include_pol=True)
-
-    return map_
-
-def cedar_map(fstate, temp, nside, pol, pix, write=False, filename=None, new=True, existing_map=None):
-    """
-    Creates the galaxy map
-
-    Parameters:
-    - fstate <object>: object created from FreqState including start and end of sampled frequencies and number of bins
-    - temp <array>: binned_T from sample_profile function
-    - nside <int>: not sure how to explain
-    - pol <str>: full for all polarizations, can also choose I, Q, V, U only (I think)
-    - ra <float>: position in the sky in degrees (Right Ascension)
-    - dec <float>: position in the sky in degrees (Declination)
-    - write <bool>: tells the function to save the file or just return the map
-    - filename <str>: name of file to save if write=True
-    - new <bool>: tells function if need to create a new map from start or will be providing existing map
-    - existing_map <h5 map>: previously created map onto which to add more stuff
-
-    Returns:
-    map_ <h5 map>: map with galaxy profile injected into
-    """
-    nfreq = len(fstate.frequencies)
-    npol = 4 if pol == "full" else 1
-
-    if new:
-        map_ = np.zeros((nfreq, npol, 12 * nside**2), dtype=np.float64)
-
-    else:  
-        map_ = np.copy(existing_map)
-    
-    for i in range(nfreq):
-        map_[i, 0, pix] += temp[i] 
 
     if write:
         write_map(filename, map_, fstate.frequencies, fstate.freq_width, include_pol=True)
