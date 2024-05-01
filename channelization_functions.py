@@ -7,7 +7,7 @@ from GalaxyCatalog import GalaxyCatalog
 import Generate_HI_Spectra as g
 import h5py
 from FreqState import FreqState
-from save_galaxy_map import write_map, map_catalog
+from savetools import write_map, map_catalog
 from scipy import interpolate
 
 ############################# helper functions ##############################
