@@ -3,7 +3,7 @@
 import numpy as np
 import numexpr as ne 
 import matplotlib.pyplot as plt
-from unit_converter import GalaxyCatalog 
+from GalaxyCatalog import GalaxyCatalog 
 import Generate_HI_Spectra as g
 import h5py
 from FreqState import FreqState
@@ -442,10 +442,27 @@ def channelize_map(U, map_path, R_path, norm_path, freq_path, fine_freqs, output
 
 ############################# application: up-channelizing catalogue of galaxy profiles ##############################
 
-def read_catalogue(file):
-    '''Function to open the galaxy catalogue and retrieve velocity and flux readings'''
+def read_catalogue(filepath):
+    '''
+    Function to open the galaxy catalogue, retrieve velocity and flux readings.
+
+    Inputs
+    - filepath: <str>
+      path to the text file containing the catalog
+
+
+    Outputs
+    - V: <array>
+      the velocities for each profile in km/s
+    - S: <array>
+      spectral flux density for each profile in mJy
+    - ra: <array>
+      Right Ascension of each source
+    - dec: <array>
+      Declination of each source
+    '''
     # Read Catalogue:
-    Catalogue = np.loadtxt(file)
+    Catalogue = np.loadtxt(filepath)
 
     # Galaxy parameters:
     MHI = Catalogue[0]      # HI Mass - SolMass
@@ -477,7 +494,7 @@ def read_catalogue(file):
 
     return V, S, z, ra, dec
 
-def get_resampled_profiles(V, S, z, fine_freqs):
+def get_resampled_profiles(V, S, z, fine_freqs, b_max=77):
     '''
     Re-samples profiles finely in frequency space
     
@@ -489,6 +506,10 @@ def get_resampled_profiles(V, S, z, fine_freqs):
     - fine_freqs: <array>
       large number of frequencies to simulate continuous 'real' spectrum
       calculated using function get_fine_freqs
+    - b_max: <float>
+      the maximum baseline of the interferometer in m
+      for a single-dish telescope, b_max is the dish diameter
+      default is for the CHORD 66-dish pathfinder b_max = 77 m
       
     Outputs
     - resampled_profiles: <array>
@@ -500,7 +521,7 @@ def get_resampled_profiles(V, S, z, fine_freqs):
 
     # converting km/s -> MHz given z and mJy -> MHz
     # outputs them from high to low freq
-    profile = GalaxyCatalog(V, S, z)
+    profile = GalaxyCatalog(V, S, z, b_max=b_max)
 
     for i in range(len(V)):
         new_prof = np.interp(fine_freqs, profile.obs_freq[i][::-1], profile.T[i][::-1]) 
@@ -508,7 +529,7 @@ def get_resampled_profiles(V, S, z, fine_freqs):
 
     return resampled_profiles 
 
-def channelize_catalogue(U, fstate, nside, catalogue_path, R_path, norm_path, freq_path, fine_freqs, output_path):
+def channelize_catalogue(U, fstate, nside, catalogue_path, R_path, norm_path, freq_path, fine_freqs, output_path,  b_max=77):
     '''
     Up-channelized the profiles from a galaxy catalog
 
@@ -531,6 +552,10 @@ def channelize_catalogue(U, fstate, nside, catalogue_path, R_path, norm_path, fr
     - output_path: <str>
       filename and path to save the new up-channelized map
       should be a .h5 file
+    - b_max: <float>
+      the maximum baseline of the interferometer in m
+      for a single-dish telescope, b_max is the dish diameter
+      default is for the CHORD 66-dish pathfinder b_max = 77 m
 
     Outputs
     - produces and saves up-channelized map to output_path
@@ -543,7 +568,7 @@ def channelize_catalogue(U, fstate, nside, catalogue_path, R_path, norm_path, fr
     V, S, z, ra, dec = read_catalogue(catalogue_path)
 
     # resampling and converting into profiles in frequency space
-    profiles = get_resampled_profiles(V, S, z, fine_freqs)
+    profiles = get_resampled_profiles(V, S, z, fine_freqs, b_max=b_max)
 
     # generating responses
     responses = upchannelize(profiles, U, R_path, norm_path, freq_path)
