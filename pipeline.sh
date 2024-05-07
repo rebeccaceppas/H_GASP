@@ -7,7 +7,7 @@
 #SBATCH --mem=257000M
 #SBATCH --time=24:00:00
 #SBATCH --job-name=pathfinder
-#SBATCH --output=/home/rebeccac/scratch/pipeline/pathfinder/pipeline.out
+#SBATCH --output=/home/rebeccac/scratch/H-GASP/pathfinder/pipeline.out
 
 function parse_yaml {
    local prefix=$2
@@ -35,6 +35,7 @@ module --force purge
 module use /project/def-mdobbs/ssiegel/chord/chord_env/modules/modulefiles/
 module load chord/chord_pipeline/2022.11
 
+##### COMBINE THESE THREE INTO ONE FILE, NOT NEEDED TO HAVE IN 3 STEPS
 # get frequencies and add to outputs.yaml file
 echo "Setting up frequency channels..."
 python get_freqs.py
@@ -63,6 +64,8 @@ fmap_min=$(echo $(expr $fmin - $num))
 ######################################## Step 1 - tool computation  ############################################
 echo "-------------- Step 1 - Tool computation --------------"
 
+## should i split it into 2 separete jobs? in terms of more efficiently using the nodes?
+
 # computing the beam transfer matrices
 # computing the response matrix R and the normalization vector norm
 # set up so that they will both be computed simultaneously
@@ -85,8 +88,8 @@ cora-makesky foreground --nside=$nside --freq $fmap_max $fmap_min $nfreq_maps --
 cora-makesky gaussianfg --nside=$nside --freq $fmap_max $fmap_min $nfreq_maps --pol=full --filename=$output_folder/synch_map.h5
 
 # getting upchannelized sky maps
-#echo "Up-channelizing cora simulated maps..."
-#python get_upchannelized_map.py 1
+echo "Up-channelizing cora simulated maps..."
+python get_upchannelized_map.py 1
 
 # getting upchannelized galaxy profiles
 echo "Up-channelizing galaxy catalog..."
@@ -98,8 +101,8 @@ echo "----------------- Step 3 - Observation -----------------"
 echo "Performing observation with caput..."
 srun python /project/6002277/ssiegel/chord/chord_env/modules/chord/chord_pipeline/2022.11/lib/python3.10/site-packages/caput/scripts/runner.py run $output_folder/simulate.yaml &> $output_folder/simulate.log
 
-######################################## Step 4 - Noise  ############################################
-echo "--------------- Step 4 - Normalized Noise ---------------"
+######################################## Step 4 - Noise and Dirty map  ############################################
+echo "--------------- Step 4 - Noise and Dirty map ---------------"
 
 echo "Getting noisy visibilities and noisy dirty map..."
 python get_noise.py 1
