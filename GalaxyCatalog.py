@@ -23,16 +23,12 @@ class GalaxyCatalog(object):
           for a single-dish telescope, b_max is the dish diameter
           default is for the CHORD 66-dish pathfinder
         '''
-        # input data parameters
         self.v = velocities                              
         self.s = fluxes                                  
         self.z = redshifts 
-        
-        # frequency parameters
-        self.rest_freq = f_rest                          
-        self.mid_freq = self.rest_freq / (1 + self.z)    # frequency at center of profiles (MHz)
-        
-        # telescope parameters
+        self.rest_freq = f_rest
+        # frequency at center of profiles (MHz)                    
+        self.mid_freq = self.rest_freq / (1 + self.z)    
         self.b_max = b_max
         
     @property
@@ -43,7 +39,6 @@ class GalaxyCatalog(object):
     @property
     def obs_freq(self):
         '''The x-axis of the profile represented by observed frequencies in MHz'''
-        # converting all units
         return self.convert_f()
 
     def convert_f(self):
@@ -56,7 +51,6 @@ class GalaxyCatalog(object):
         
     def convert_T(self):
         '''Convert spectral flux densitities in mJy to temperatures in K'''
-        # getting temperatures
         c = (constants.c.to(units.km/units.s))
         f = (self.obs_freq*units.MHz).to(1/units.s)
         self.wavelength = (c/f).to(units.m)
