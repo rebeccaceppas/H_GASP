@@ -6,8 +6,10 @@ End-to-end simulation pipeline for HI galaxy surveys focused on the performance 
 # Example products
 - Beam Transfer Matrices
 - Synthesized beams
-- Semi-realistics input map simulations
+- Semi-realistics input map simulations (HI galaxies, synchrotron, cosmological 21 cm emission, etc)
 - Up-channelization tools
 - Pristine visibilities
 - Visibilities with noise and/or calibration errors
 - Dirty maps
+- Full end-to-end simulations with a full HI mock catalog
+- Full end-to-end simulations with an arbitrary number of sources at specific locations or following some desired distribution.
