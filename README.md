@@ -13,3 +13,9 @@ End-to-end simulation pipeline for HI galaxy surveys focused on the performance 
 - Dirty maps
 - Full end-to-end simulations with a full HI mock catalog
 - Full end-to-end simulations with an arbitrary number of sources at specific locations or following some desired distribution.
+
+
+The form currently being made that will be able to create the config files and the bash script to run the desired parts/functionalities of the pipeline is here to edit: https://docs.google.com/forms/d/1iF50G5dHDYxVfT37VYx123js3cG9QH3kKOa84x6P_IE/edit
+
+And here to use (not ready yet): https://forms.gle/ixHCqy71ZNwCrxhdA
+
