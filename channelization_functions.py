@@ -76,9 +76,8 @@ def get_chans(fmax_chan, fmin_chan, fmin=300, number_channels=2048, sampling_rat
     - array corresponding to the coarse channel indices
       for the chosen frequency range and instrumental parameters
     '''
-    N = 2*number_channels
-    min_chan = np.floor(freq_unit_strip(fmin_chan, fmin, N, sampling_rate))
-    max_chan = np.ceil(freq_unit_strip(fmax_chan, fmin, N, sampling_rate))
+    min_chan = np.floor(freq_unit_strip(fmin_chan, fmin, number_channels, sampling_rate))
+    max_chan = np.ceil(freq_unit_strip(fmax_chan, fmin, number_channels, sampling_rate))
     return np.arange(min_chan, max_chan + 1)
 
 def get_fine_freqs(coarse_frequencies):
