@@ -12,37 +12,49 @@ import channelization_functions as cf
 import h5py
 import numpy as np
 import frequencies as fr
+from savetools import write_map
 
-class UpchannelizedMap():
+class Upchannelization():
 
-    def __init__(self, U, map_paths, output_directory, output_filename, R_filepath='', norm_filepath='') -> None:
+    def __init__(self, U, fmax, fmin, map_paths, output_directory, output_filename, R_filepath='', norm_filepath='') -> None:
         
         self.U = U
+        self.fmax = fmax
+        self.fmin = fmin
         self.map_paths = map_paths
         self.output_name = output_filename
         self.output_directory = output_directory
         self.R_filepath = R_filepath
         self.norm_filepath = norm_filepath
-
-
-    def get_R_norm(self, fstate, fmin, fmax):
-        # if the R and norm matrices have not already been computed, do it here
-        fine_freqs = cf.get_fine_freqs(fstate.frequencies)
-        R, chans, norm = cf.get_response_matrix(fine_freqs,
-                                                self.U,
-                                                fmin,
-                                                fmax)
         
-        np.save(self.output_directory+'/R.npy')
-        np.save(self.output_directory+'/norm.npy')
+
+    def get_R_norm(self):
+        # if the R and norm matrices have not already been computed, do it here
+        fstate = fr.get_frequencies(self.fmax, self.fmin, self.U)
+        
+        fine_freqs = cf.get_fine_freqs(fstate.frequencies)
+        R, freqs_matrix, norm = cf.get_response_matrix(fine_freqs,
+                                                self.U,
+                                                self.fmin,
+                                                self.fmax)
+        
+        np.save(self.output_directory+'/R.npy', R)
+        np.save(self.output_directory+'/norm.npy', norm)
+        np.save(self.output_directory+'/freqs_matrix.npy', freqs_matrix)
 
         print('Up-channelization matrix with shape {} saved to {}.'.format(R.shape,
                                                                            self.output_directory+'/R.npy'))
         print('Normalization vector with shape {} saved to {}.'.format(norm.shape,
                                                                            self.output_directory+'/norm.npy'))
+        print('Matrix frequencies with shape {} saved to {}'.format(freqs_matrix.shape,
+                                                                    self.output_directory + '/freqs_matrix.npy'))
+        self.R_filepath = self.output_directory+'/R.npy'
+        self.norm_filepath = self.output_directory+'/norm.npy'
+        self.freqs_matrix_filepath = self.output_directory+'/freqs_matrix.npy'
+        
+    def upchannelize(self, catalog=False, catalog_filepath='', nside=128):
 
-    def upchannelize(self, fstate, catalog=False, catalog_filepath='', nside=128):
-
+        fstate = fr.get_frequencies(self.fmax, self.fmin, self.U)
         fine_freqs = cf.get_fine_freqs(fstate.frequencies)
 
         open_maps(self.map_paths,
@@ -63,10 +75,10 @@ class UpchannelizedMap():
 
         else:
             cf.channelize_map(self.U,
-                            fstate,
-                            self.output_directory + '/full_input.h5',
+                              self.output_directory + '/full_input.h5',
                             self.R_filepath,
                             self.norm_filepath,
+                            self.freqs_matrix_filepath,
                             fine_freqs,
                             self.output_directory + self.output_name)
 
@@ -172,6 +184,7 @@ def open_maps(map_paths, output_name):
                 f_width)
 
 
-def write_map(map_filepath, sky_map, freqs, f_width, include_pol=True):
-
+def _write_map(map_filepath, sky_map, freqs, f_width, include_pol=True):
+    # maybe have it here but probably worth it to have it in savetools.py 
+    # or another file I come up with for this sort of utilities
     pass

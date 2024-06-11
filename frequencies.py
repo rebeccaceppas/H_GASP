@@ -63,7 +63,6 @@ class FreqState(object):
 def get_frequencies(fmax, fmin, U):
 
     chans = cf.get_chans(fmax, fmin)
-    print(chans)
     use_max = cf.freq_unit_add(np.arange(chans.min()-0.5 + 1/(2*U), chans.max()+0.5, 1/U).max())
     use_min = cf.freq_unit_add(np.arange(chans.min()-0.5 + 1/(2*U), chans.max()+0.5, 1/U).min())
     df = (use_max - use_min) / (chans.size*U -1)
@@ -72,8 +71,6 @@ def get_frequencies(fmax, fmin, U):
     f_start = use_max
     f_end = use_min - df
     nfreq = int(size_freqs)
-
-    print(f_start, f_end, nfreq)
 
     fstate = FreqState()
     fstate.freq = (f_start, f_end, nfreq)

@@ -399,6 +399,8 @@ def channelize_map(U, map_path, R_path, norm_path, freq_path, fine_freqs, output
     Inputs
     - U: <int>
       up-channelization factor, U = 2^n
+    - map_path: <str>
+      path to the input map to up-channelize (.h5 file)
     - R_path, norm_path, freq_path: <str>
       paths to response matrix R, normalization vector norm,
       and output frequencies from get_response_matrix
