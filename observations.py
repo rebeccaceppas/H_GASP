@@ -82,9 +82,6 @@ class Upchannelization():
                             fine_freqs,
                             self.output_directory + self.output_name)
 
-        
-
-
 
 class Visibilities():
 

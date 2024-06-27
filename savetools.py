@@ -2,6 +2,7 @@ import numpy as np
 import h5py
 import healpy as hp
 from scipy import stats as ss
+import matplotlib.pyplot as plt
 
 def sample_profile(fstate, gal_freqs, gal_signal):
     '''
@@ -107,7 +108,13 @@ def make_map(fstate, temp, nside, pol, ra, dec, write=False, filename=None, new=
     else:  
         map_ = np.copy(existing_map)
     
+    plt.plot(temp)
+    plt.show()
+    #print(temp)
+    print(np.max(temp))
+
     for i in range(nfreq):
+        print(temp[i])
         map_[i, 0, hp.ang2pix(nside, ra, dec, lonlat=True)] += temp[i]  # removed the flip because added it in the sampling function
 
     if write:
