@@ -98,7 +98,7 @@ def get_fine_freqs(coarse_frequencies):
     dc = coarse_frequencies[1] - coarse_frequencies[0] 
     return np.arange(fmax, fmin, dc / 3) 
 
-def window(index, taps=4, number_channels=2048):
+def window(index, taps=4, N=4096):
     '''
     Sinc-Hanning window function
 
@@ -107,15 +107,14 @@ def window(index, taps=4, number_channels=2048):
     - index: <array of int>
     - taps: <int>
       number of taps
-    - number_channels: <int>
-      number of channels. default is CHORD's 2048
+    - N: <int>
+      2 x number of channels. default is CHORD's 4096
 
     Outputs
     -------
     - W: <array>
       Sinc-Hanning windown function 
     '''
-    N = 2*number_channels
     W = (np.cos(np.pi * (index-taps*N/2)/(taps*N-1)))**2 * np.sinc((index-taps*N/2)/N)
     return W
 
@@ -166,7 +165,7 @@ def weight_chan(cf, taps=4, number_channels=2048):
     j = np.reshape(np.arange(taps*N), (1, taps*N)) 
 
     # shape = (coarse chans, nfreq, M*N)
-    summation = window(j, taps, N) * exponential_chan(j, cf, N)
+    summation = window(j, taps, N) * exponential_chan(j, cf, number_channels)
 
     # collapsing to shape (coarse chans, nfreq)
     return np.sum(summation, axis = 2)
