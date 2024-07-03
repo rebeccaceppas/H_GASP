@@ -5,11 +5,8 @@
 ##        3. Inclination     (i in radians)
 ##        4. Distance        (D in Mpc)
 
-import matplotlib.pyplot as plt
 import astropy.units as u
-import astropy.constants as c
 import numpy as np
-from random import choices
 from scipy import special
 from numpy import diff
 from scipy.interpolate import UnivariateSpline

@@ -60,11 +60,56 @@ class FreqState(object):
         return value
 
 
-def get_frequencies(fmax, fmin, U):
+def get_frequencies(fmax_obs, fmin_obs, U, fmin=300, number_channels=2048, sampling_rate=0.417):
+    '''
+    Calculates the exact frequencies of the observation
+    given a maximum and minimum frequencies and up-channelization factor U.
 
-    chans = cf.get_chans(fmax, fmin)
-    use_max = cf.freq_unit_add(np.arange(chans.min()-0.5 + 1/(2*U), chans.max()+0.5, 1/U).max())
-    use_min = cf.freq_unit_add(np.arange(chans.min()-0.5 + 1/(2*U), chans.max()+0.5, 1/U).min())
+    Useful for when  making maps and simulating beam transfer matrices.
+
+    Inputs
+    ------
+    - fmax_obs: <float>
+      maximum frequency to consider for this specific observation in MHz
+    - fmin_obs: <float>
+      minimum frequency to consider for this specific observation in MHz
+    - fmin: <float>
+      minimum instrumental frequency. default is CHORD's 300 MHz
+    - number_channels: <int>
+      number of channels. default is CHORD's 2048
+    - sampling_rate: <float>
+      time stream sampling rate in ns. default is CHORD's 0.417 ns  
+
+    Outputs
+    -------
+    - fstate: <FreqState object>
+      object containing the frequency specifications used throughout the pipeline
+    - f_start: <float>
+      frequency of the initial channel**
+    - f_end: <float>
+      frequency of the final channel**
+    - nfreq: <int>
+      number of frequency channels in up-channelized observation**
+
+    ** these are the quatities to be fed into the map-making for input maps and the 
+       beam transfer matrix computation using drift.
+       '''
+
+    chans = cf.get_chans(fmax_obs, fmin_obs,
+                         fmin=fmin,
+                         number_channels=number_channels,
+                         sampling_rate=sampling_rate)
+    
+    use_max = cf.freq_unit_add(np.arange(chans.min()-0.5 + 1/(2*U), chans.max()+0.5, 1/U).max(),
+                               fmin=fmin,
+                               number_channels=number_channels,
+                               sampling_rate=sampling_rate)
+    
+    use_min = cf.freq_unit_add(np.arange(chans.min()-0.5 + 1/(2*U), chans.max()+0.5, 1/U).min(),
+                               fmin=fmin,
+                               number_channels=number_channels,
+                               sampling_rate=sampling_rate)
+    
     df = (use_max - use_min) / (chans.size*U -1)
     size_freqs = chans.size*U
 
@@ -75,4 +120,4 @@ def get_frequencies(fmax, fmin, U):
     fstate = FreqState()
     fstate.freq = (f_start, f_end, nfreq)
 
-    return fstate
+    return fstate, f_start, f_end, nfreq

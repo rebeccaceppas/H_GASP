@@ -2,7 +2,6 @@ import numpy as np
 import h5py
 import healpy as hp
 from scipy import stats as ss
-import matplotlib.pyplot as plt
 
 def sample_profile(fstate, gal_freqs, gal_signal):
     '''
@@ -80,7 +79,7 @@ def write_map(filename, data, freq, fwidth=None, include_pol=True):
         dset = f.create_dataset("index_map/pixel", data=np.arange(data.shape[2]))
         dset.attrs["__memh5_distributed_dset"] = False
 
-def make_map(fstate, temp, nside, pol, ra, dec, write=False, filename=None, new=True, existing_map=None):
+def make_map(frequencies, freq_width, temp, nside, pol, ra, dec, write=False, filename=None, new=True, existing_map=None):
     """
     Creates the galaxy map
 
@@ -99,7 +98,7 @@ def make_map(fstate, temp, nside, pol, ra, dec, write=False, filename=None, new=
     Returns:
     map_ <h5 map>: map with galaxy profile injected into
     """
-    nfreq = len(fstate.frequencies)
+    nfreq = len(frequencies)
     npol = 4 if pol == "full" else 1
 
     if new:
@@ -107,18 +106,12 @@ def make_map(fstate, temp, nside, pol, ra, dec, write=False, filename=None, new=
 
     else:  
         map_ = np.copy(existing_map)
-    
-    plt.plot(temp)
-    plt.show()
-    #print(temp)
-    print(np.max(temp))
 
     for i in range(nfreq):
-        print(temp[i])
         map_[i, 0, hp.ang2pix(nside, ra, dec, lonlat=True)] += temp[i]  # removed the flip because added it in the sampling function
 
     if write:
-        write_map(filename, map_, fstate.frequencies, fstate.freq_width, include_pol=True)
+        write_map(filename, map_, frequencies, freq_width, include_pol=True)
 
     return map_
 

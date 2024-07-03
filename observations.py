@@ -2,6 +2,7 @@
 Classes and functions for mock observation steps
 
 - up-channelization
+- beam transfer matrices
 - visibilities
 - noisy visibilities
 - visibilities with calibration errors
@@ -16,71 +17,84 @@ from savetools import write_map
 
 class Upchannelization():
 
-    def __init__(self, U, fmax, fmin, map_paths, output_directory, output_filename, R_filepath='', norm_filepath='') -> None:
+    def __init__(self, U, fmax, fmin, output_directory, output_filename, R_filename, norm_filename, freqs_matrix_filename) -> None:
         
         self.U = U
         self.fmax = fmax
         self.fmin = fmin
-        self.map_paths = map_paths
         self.output_name = output_filename
         self.output_directory = output_directory
-        self.R_filepath = R_filepath
-        self.norm_filepath = norm_filepath
+        self.R_filename = R_filename
+        self.norm_filename = norm_filename
+        self.freqs_matrix_filename = freqs_matrix_filename
         
 
     def get_R_norm(self):
         # if the R and norm matrices have not already been computed, do it here
-        fstate = fr.get_frequencies(self.fmax, self.fmin, self.U)
+        fstate, f_start, f_end, nfreq = fr.get_frequencies(self.fmax, self.fmin, self.U)
         
         fine_freqs = cf.get_fine_freqs(fstate.frequencies)
+
         R, freqs_matrix, norm = cf.get_response_matrix(fine_freqs,
                                                 self.U,
                                                 self.fmin,
                                                 self.fmax)
         
-        np.save(self.output_directory+'/R.npy', R)
-        np.save(self.output_directory+'/norm.npy', norm)
-        np.save(self.output_directory+'/freqs_matrix.npy', freqs_matrix)
+        try:
+            np.save(self.output_directory+self.R_filename, R)
+            np.save(self.output_directory+self.norm_filename, norm)
+            np.save(self.output_directory+self.freqs_matrix_filename, freqs_matrix)
+        except:
+            print(self.output_directory, 'does not exist. Please create it and try again.')
 
         print('Up-channelization matrix with shape {} saved to {}.'.format(R.shape,
-                                                                           self.output_directory+'/R.npy'))
+                                                                           self.output_directory+self.R_filename))
         print('Normalization vector with shape {} saved to {}.'.format(norm.shape,
-                                                                           self.output_directory+'/norm.npy'))
+                                                                           self.output_directory+self.norm_filename))
         print('Matrix frequencies with shape {} saved to {}'.format(freqs_matrix.shape,
-                                                                    self.output_directory + '/freqs_matrix.npy'))
-        self.R_filepath = self.output_directory+'/R.npy'
-        self.norm_filepath = self.output_directory+'/norm.npy'
-        self.freqs_matrix_filepath = self.output_directory+'/freqs_matrix.npy'
+                                                                    self.output_directory + self.freqs_matrix_filename))
         
-    def upchannelize(self, catalog=False, catalog_filepath='', nside=128):
+    def upchannelize(self, catalog=False, map_paths='', catalog_filepath='', nside=128, b_max=77):
 
-        fstate = fr.get_frequencies(self.fmax, self.fmin, self.U)
+        fstate, f_start, f_end, nfreq = fr.get_frequencies(self.fmax, self.fmin, self.U)
         fine_freqs = cf.get_fine_freqs(fstate.frequencies)
 
-        open_maps(self.map_paths,
-                  self.output_directory + '/full_input.h5')
+        print('The exact frequency specifications of this observation are:')
+        print('f_start = {}, f_end = {}, nfreq = {}.'.format(f_start, f_end, nfreq))
+        print('Use these exact values when computing the beam transfer matrices with drift.')
 
         if catalog:
-            # need to add something that complains if they have chosen a catalog and have not specified the nside
-            # or catalog filepath
+
+            print('Creating up-channelized map from catalog {} with nside = {}.'.format(catalog_filepath, nside))
 
             cf.channelize_catalogue(self.U,
                                     fstate,
                                     nside,
                                     catalog_filepath,
-                                    self.R_filepath,
-                                    self.norm_filepath,
+                                    self.output_directory + self.R_filename,
+                                    self.output_directory + self.norm_filename,
+                                    self.output_directory + self.freqs_matrix_filename,
                                     fine_freqs,
-                                    self.output_directory + self.output_name)
+                                    self.output_directory + self.output_name,
+                                    b_max = b_max)
+            
+            print('Channelized map saved at', self.output_directory + self.output_name)
 
         else:
+            # open the input maps tp up-channelize
+            # combine all maps into 1
+            open_maps(map_paths,
+                  self.output_directory + 'full_input.h5')
+            
             cf.channelize_map(self.U,
-                              self.output_directory + '/full_input.h5',
-                            self.R_filepath,
-                            self.norm_filepath,
-                            self.freqs_matrix_filepath,
+                              self.output_directory + 'full_input.h5',
+                            self.output_directory + self.R_filename,
+                            self.output_directory + self.norm_filename,
+                            self.output_directory + self.freqs_matrix_filename,
                             fine_freqs,
                             self.output_directory + self.output_name)
+            
+            print('Channelized map saved at', self.output_directory + self.output_name)
 
 
 class Visibilities():
@@ -183,5 +197,5 @@ def open_maps(map_paths, output_name):
 
 def _write_map(map_filepath, sky_map, freqs, f_width, include_pol=True):
     # maybe have it here but probably worth it to have it in savetools.py 
-    # or another file I come up with for this sort of utilities
+    # or another file for this sort of utilities
     pass

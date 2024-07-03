@@ -30,25 +30,23 @@ class GalaxyCatalog(object):
         # frequency at center of profiles (MHz)                    
         self.mid_freq = self.rest_freq / (1 + self.z)    
         self.b_max = b_max
-        
-    @property
-    def T(self):
-        '''The galaxy profile in units of K.'''
-        return self.convert_T()
 
-    @property
-    def obs_freq(self):
-        '''The x-axis of the profile represented by observed frequencies in MHz'''
-        return self.convert_f()
+        self.convert_f()
+        self.convert_T()
 
     def convert_f(self):
         '''Convert velocities in km/s to observed frequencies in MHz'''
         c = (constants.c.to(units.km/units.s)).value
-        obs_freq_ = (self.rest_freq * (1 - self.v/c))
-        shift_freq = self.mid_freq - np.mean(obs_freq_)
-        freqs = obs_freq_ + shift_freq.reshape(2, 1)
-        return freqs
-        
+        freqs = np.ones_like(self.v)
+
+        for i, vel in enumerate(self.v):
+          obs_freq_ = (self.rest_freq * (1-vel/c))
+          shift_freq = self.mid_freq[i] - np.mean(obs_freq_)
+          obs_freq = obs_freq_ + shift_freq
+          freqs[i] = obs_freq
+
+        self.obs_freq = freqs
+
     def convert_T(self):
         '''Convert spectral flux densitities in mJy to temperatures in K'''
         c = (constants.c.to(units.km/units.s))
@@ -56,4 +54,5 @@ class GalaxyCatalog(object):
         self.wavelength = (c/f).to(units.m)
         ang_res = (self.wavelength) / (self.b_max*units.m)
         T = (self.s*units.mJy * self.wavelength**2 / (2*constants.k_B*ang_res**2)).to(units.K) 
-        return T.value
+
+        self.T = T

@@ -1,10 +1,9 @@
 import numpy as np
 import numexpr as ne 
-import matplotlib.pyplot as plt
 from GalaxyCatalog import GalaxyCatalog
 import Generate_HI_Spectra as g
 import h5py
-from save_galaxy_map import write_map, map_catalog
+from savetools import write_map, map_catalog
 from scipy import interpolate
 
 ############################# helper functions ##############################
@@ -14,6 +13,7 @@ def freq_unit_strip(f, fmin=300, number_channels=2048, sampling_rate=0.417):
     Strips quantities in frequency-space to become unitless
     
     Inputs
+    ------
     - f: <array>
       array of frequencies in MHz
     - fmin: <float>
@@ -24,6 +24,7 @@ def freq_unit_strip(f, fmin=300, number_channels=2048, sampling_rate=0.417):
       time stream sampling rate in ns. default is CHORD's 0.417 ns
 
     Outputs
+    -------
     - f_bar: <array>
       unitless frequency array
     '''
@@ -36,6 +37,7 @@ def freq_unit_add(f_bar, fmin=300, number_channels=2048, sampling_rate=0.417):
     Adds frequency units (MHz) to unitless quantities
     
     Inputs
+    ------
     - f_bar: <array>
       array of unitless frequencies
     - fmin: <float>
@@ -46,6 +48,7 @@ def freq_unit_add(f_bar, fmin=300, number_channels=2048, sampling_rate=0.417):
       time stream sampling rate in ns. default is CHORD's 0.417 ns
 
     Outputs
+    -------
     - f: <array>
       frequency array with units of MHz
     '''
@@ -59,6 +62,7 @@ def get_chans(fmax_chan, fmin_chan, fmin=300, number_channels=2048, sampling_rat
     some telescope sampling and spectral properties.
     
     Inputs
+    ------
     - fmax_chan: <float>
       maximum frequency to consider for channels in MHz
     - fmin_chan: <float>
@@ -71,6 +75,7 @@ def get_chans(fmax_chan, fmin_chan, fmin=300, number_channels=2048, sampling_rat
       time stream sampling rate in ns. default is CHORD's 0.417 ns
 
     Outputs
+    -------
     - array corresponding to the coarse channel indices
       for the chosen frequency range and instrumental parameters
     '''
@@ -86,10 +91,12 @@ def get_fine_freqs(coarse_frequencies):
     It adds some padding and makes the resolution 3 times finer.
 
     Inputs
+    ------
     - coarse_frequencies: <array>
       frequencies in MHz in descending order (max to min)
 
     Outputs
+    -------
     - finer frequencies within that range for up-channelization
     '''
     fmax = np.max(coarse_frequencies)+2
@@ -122,6 +129,7 @@ def exponential_chan(s, mtx, N=4096):
     Calculates exponential term of first-round PFB
 
     Inputs
+    ------
     - s: <array>
       indices for summation
     - mtx: <array>
@@ -130,6 +138,7 @@ def exponential_chan(s, mtx, N=4096):
       number of channels. default is CHORD's 2048
 
     Outputs
+    -------
     - exponential e^(-2*i*pi*mtx*s/N)
     '''
     # reshaping (coarse chans, nfreq) -> (coarse chans, nfreq, 1)
