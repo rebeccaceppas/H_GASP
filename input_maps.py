@@ -5,14 +5,21 @@ import channelization_functions as cf
 import Generate_HI_Spectra as g
 from GalaxyCatalog import GalaxyCatalog
 import matplotlib.pyplot as plt
+import subprocess
 
 
 class HIGalaxies():
-
-    '''adding galaxies from the catalogs'''
+    '''Input maps from the galaxy catalog'''
 
     def __init__(self, catalog_path, f_start, f_end, nfreq):
-
+        '''
+        - catalog_path: <str>
+          the path and name of the catalog to use
+        - f_start, f_end: <float>
+          largest and smallest frequencies of your beam transfer matrices
+        - nfreq: <inf>
+          number of frequencies
+        '''
         self.catalog = catalog_path
         self.f_start = f_start
         self.f_end = f_end
@@ -20,12 +27,32 @@ class HIGalaxies():
 
         self.pol = "full"
 
+    def get_map(self, nside, output_filepath, ngals=None, ras=[], decs=[], T_brightness=[], max_baseline=77, seed=0):
+        '''
+        Creates an input map with the desired HI galaxies from the catalog
 
-    def get_map(self, nside, output_filepath, ngals=None, max_baseline=77, seed=0, ras=[], decs=[], T_brightness=[]):
-
-        '''T brightness is the peak brightness, the galaxy will still have the shape of whichever 
-        galaxy is selected from the catalog randomly as determined by the seed'''
-
+        Inputs
+        ------
+        - nside: <int>
+          defining the resolution of the created healpix map. nside = 2^n.
+        - output_filepath: <str>
+          path and filename to which we save the input synthesized beam map.
+        - ngals: <int>
+          number of galaxies to inject into the map.
+          default is None which injects all galaxies from the catalog.
+        - ras, decs: <list of floats>
+          right ascension and declination of each galaxy in degrees
+          default is empty list which injects them at a location specified in the catalog
+        - T_brightness: <list of floats>
+          peak brightness of your sources.
+          default is mepty list which respects peak brightness given by the catalog.
+        - max_baseline: <float>
+          the longest baseline of the instrument in m
+          used for the conversion between Jy and K
+          default is 77m which is approximately for the CHORD pathfinder
+        - seed: <int>
+          seed for the random selection of ngals galaxies
+        '''
         # checking the arrays satisfy basic conditions
         if len(ras) > 0:
             assert len(decs)==len(ras), """Your positions ras and decs must have the same length but have 
@@ -76,8 +103,7 @@ class HIGalaxies():
                     write=True)
 
 class SynthesizedBeam():
-
-    '''creates a healpix map to simulate a synthesized beam through map-maker'''
+    '''Healpix map to simulate a synthesized beam through map-maker'''
 
     def __init__(self, f_start, f_end, nfreq=2):
         '''
@@ -88,7 +114,6 @@ class SynthesizedBeam():
           minimum is 2 if you don't care about frequency evolution
           otherwise, match to the number of frequencies of your previous specifications
         '''
-        
         self.f_start = f_start
         self.f_end = f_end
         self.nfreq = nfreq
@@ -98,14 +123,12 @@ class SynthesizedBeam():
         '''
         Creates an input map with a single source for simulating synthesized beams with the dirty map maker
 
-        Inputs:
+        Inputs
         ------
         - nside: <int>
           defining the resolution of the created healpix map. nside = 2^n.
-        - ra: <float>
-          right ascension in degrees
-        - dec: <float>
-          declination in degrees
+        - ra, dec: <float>
+          right ascension and declination in degrees
         - output_filepath: <str>
           path and filename to which we save the input synthesized beam map
           default None will name it based on ra and dec.
@@ -129,17 +152,40 @@ class SynthesizedBeam():
                          filename=output_directory + output_filename,
                          new=True, existing_map=None)
 
-
 class Foregrounds():
-    
     '''submitting jobs for the cora makesky components
     
-    want to save one for each one they ask for individually and one complete one with all the ones combined?
+    want to save one for each one they ask for individually 
+    and one complete one with all the ones combined?
     '''
 
-    def __init__(self) -> None:
+    def __init__(self, f_start, f_end, nfreq, nside):
+        
+        self.f_start = f_start
+        self.f_end = f_end
+        self.nfreq = nfreq
+        self.nside = nside
+        self.pol = 'full'
+
+    def get_component(self, component_name):
+
+        subprocess.call('cora-makesky ')
+
+        'cora-makesky 21cm --nside=64 --freq 998.0 993.0 100 --pol=full --filename=post_eor_signal_map.h5'
+
         pass
 
+    def get_maps(self, component_names_list):
+        '''gets all simulated maps and combines them for a full foreground map'''
+
+        for component in component_names_list:
+            
+            self.get_component(component)
+
+
+        pass
+
+    
 
 
 def get_spectra(filepath, ngals=None, seed=0):
