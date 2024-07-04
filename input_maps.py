@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import subprocess
 import healpy as hp
 import h5py
+import os
 
 
 class HIGalaxies():
@@ -176,10 +177,13 @@ class Foregrounds():
                                                                                   self.nside,
                                                                                   self.f_start,
                                                                                   self.f_end,
+                                                                                  self.nfreq,
                                                                                   self.pol,
                                                                                   self.output_directory+component_name+'.h5')
 
-        subprocess.call(['cora-makesky', command])
+        #subprocess.run(['cora-makesky ' + command])
+        
+        os.system('cora-makesky ' + command)
 
     def get_maps(self, component_names_list):
         '''gets all simulated maps and combines them for a full foreground map'''
