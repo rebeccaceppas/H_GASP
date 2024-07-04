@@ -75,14 +75,60 @@ class HIGalaxies():
                     filename=output_filepath,
                     write=True)
 
-
-
 class SynthesizedBeam():
-    
-    '''adding a single source for a synthesized beam simulation'''
 
-    def __init__(self) -> None:
-        pass
+    '''creates a healpix map to simulate a synthesized beam through map-maker'''
+
+    def __init__(self, f_start, f_end, nfreq=2):
+        '''
+        - f_start, f_end: <float>
+          largest and smallest frequencies of your beam transfer matrices
+        - nfreq: <inf>
+          number of frequencies in your beam transfer matrices
+          minimum is 2 if you don't care about frequency evolution
+          otherwise, match to the number of frequencies of your previous specifications
+        '''
+        
+        self.f_start = f_start
+        self.f_end = f_end
+        self.nfreq = nfreq
+        self.pol = 'full'
+
+    def get_map(self, nside, ra, dec, output_directory, output_filename=None, T_brightness=1.0):
+        '''
+        Creates an input map with a single source for simulating synthesized beams with the dirty map maker
+
+        Inputs:
+        ------
+        - nside: <int>
+          defining the resolution of the created healpix map. nside = 2^n.
+        - ra: <float>
+          right ascension in degrees
+        - dec: <float>
+          declination in degrees
+        - output_filepath: <str>
+          path and filename to which we save the input synthesized beam map
+          default None will name it based on ra and dec.
+        - T_brightness: <float>
+          brightness of your source. Default is 1.
+        '''
+        fstate = FreqState()
+        fstate.freq = (self.f_start, self.f_end, self.nfreq)
+
+        temps = np.ones(self.nfreq)*T_brightness
+
+        if output_filename is None:
+            output_filename = 'input_RA{0:.2f}_DEC{1:.2f}.h5'.format(ra, dec)
+
+        input_map = make_map(fstate.frequencies,
+                             fstate.freq_width,
+                         temps,
+                         nside, self.pol,
+                         ra, dec,
+                         write=True,
+                         filename=output_directory + output_filename,
+                         new=True, existing_map=None)
+
 
 class Foregrounds():
     
@@ -178,44 +224,6 @@ def get_spectra(filepath, ngals=None, seed=0):
 ##### old functions ######
 
 
-
-def inject_synthesized_beam(ra, dec, 
-                            f_start=1418, f_end=1417, nfreq=2, 
-                            nside=512, filename=None):
-
-    '''Injects a source in a map for simulating synthesized beams with dirty map maker
-
-    Inputs:
-    ------
-    - ra: <float>
-      right ascension in degrees
-    - dec: <float>
-      declination in degrees
-
-    Outputs:
-    -------
-    '''
-
-    fstate = FreqState()
-    fstate.freq = (f_start, f_end, nfreq)
-
-    binned_temps = np.ones(nfreq)
-
-    pol='full'
-
-    if filename is None:
-        filename = 'input_RA{0:.2f}_DEC{0:.2f}.h5'.format(ra, dec)
-
-    map_input = make_map(fstate,
-                         binned_temps,
-                         nside, pol,
-                         ra, dec,
-                         write=True,
-                         filename=filename,
-                         new=True, existing_map=None)
-
-    return map_input
-    
 
 def inject_ngals(R_filepath, 
                  norm_filepath, 
