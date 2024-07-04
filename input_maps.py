@@ -20,7 +20,7 @@ class HIGalaxies():
           the path and name of the catalog to use
         - f_start, f_end: <float>
           largest and smallest frequencies of your beam transfer matrices
-        - nfreq: <inf>
+        - nfreq: <int>
           number of frequencies
         '''
         self.catalog = catalog_path
@@ -39,7 +39,7 @@ class HIGalaxies():
         - nside: <int>
           defining the resolution of the created healpix map. nside = 2^n.
         - output_filepath: <str>
-          path and filename to which we save the input synthesized beam map.
+          path and filename to which we save the input maps.
         - ngals: <int>
           number of galaxies to inject into the map.
           default is None which injects all galaxies from the catalog.
@@ -112,7 +112,7 @@ class SynthesizedBeam():
         '''
         - f_start, f_end: <float>
           largest and smallest frequencies of your beam transfer matrices
-        - nfreq: <inf>
+        - nfreq: <int>
           number of frequencies in your beam transfer matrices
           minimum is 2 if you don't care about frequency evolution
           otherwise, match to the number of frequencies of your previous specifications
@@ -156,14 +156,19 @@ class SynthesizedBeam():
                          new=True, existing_map=None)
 
 class Foregrounds():
-    '''submitting jobs for the cora makesky components
-    
-    want to save one for each one they ask for individually 
-    and one complete one with all the ones combined?
-    '''
+    '''Input healpix maps for other sky components given in cora package'''
 
     def __init__(self, f_start, f_end, nfreq, nside, output_directory):
-        
+        '''
+        - f_start, f_end: <float>
+          largest and smallest frequencies of your beam transfer matrices
+        - nfreq: <int>
+          number of frequencies
+        - nside: <int>
+          defining the resolution of the created healpix map. nside = 2^n.
+        - output_directory: <str>
+          path to which we save the input foreground maps
+        '''
         self.f_start = f_start
         self.f_end = f_end
         self.nfreq = nfreq
@@ -172,6 +177,7 @@ class Foregrounds():
         self.pol = 'full'
 
     def get_component(self, component_name):
+        '''runs cora-makesky command to simulate input maps for "component_name"'''
 
         command = '{} --nside={} --freq {} {} {} --pol={} --filename={}'.format(component_name,
                                                                                   self.nside,
@@ -180,14 +186,25 @@ class Foregrounds():
                                                                                   self.nfreq,
                                                                                   self.pol,
                                                                                   self.output_directory+component_name+'.h5')
-
-        #subprocess.run(['cora-makesky ' + command])
-        
         os.system('cora-makesky ' + command)
 
     def get_maps(self, component_names_list):
-        '''gets all simulated maps and combines them for a full foreground map'''
+        '''
+        Gets all simulated maps for sky components and combines them for a full foreground map.
 
+        Inputs
+        ------
+        - component_names_list: <list of strings>
+          a list containing the sky components to be simulated with cora
+          options are: 21cm, pointsource, galaxy, foreground
+          for more info on each, read the cora foregound documentation
+
+        Outputs
+        -------
+        - creates an individual healpix map for each of the desired components
+        - saves an additional file in output_directory with all foreground components combined
+          called foregrounds_all.h5
+        '''
         fstate = FreqState()
         fstate.freq = (self.f_start, self.f_end, self.nfreq)
 
@@ -203,15 +220,7 @@ class Foregrounds():
                   foregrounds_all,
                   fstate.frequencies,
                   fstate.freq_width)
-        
-
-
-
-
-
     
-
-
 def get_spectra(filepath, ngals=None, seed=0):
     '''
     Function to open the galaxy catalogue, retrieve velocity and flux readings.
@@ -285,7 +294,6 @@ def get_spectra(filepath, ngals=None, seed=0):
 
     return V, S, np.array(zs), ras, decs
 
-
 def open_map(filepath):
 
     f = h5py.File(filepath)
@@ -293,92 +301,4 @@ def open_map(filepath):
     f.close()
 
     return m
-
-
-
-
-##### old functions ######
-
-
-
-def inject_ngals(R_filepath, 
-                 norm_filepath, 
-                 filename,
-                 ngals='all',
-                 save_gal_info=False, 
-                 f_start=1420.276874203762, 
-                 f_end=1369.3410603548411, 
-                 nfreq=1392, 
-                 U=16, 
-                 nside=512, 
-                 catalogue_filepath='/home/rebeccac/scratch/thesis/input_maps/ConstrainSim_dec45.txt'):
-    
-    '''Inject ngals out of the catalog
-    This is for the 2D matched filted to test with multiple Ngal
-    The input map will also be used for CLEAN
-    
-    Note: the maximum for the ALFALFA constrained catalog is ~3,500
-    Note2: the catalogs will be upchannelized
-
-    Inputs
-    ------
-    - ngals: <int> or <str: "all">
-    '''
-
-    fstate = FreqState()
-    fstate.freq = (f_start, f_end, nfreq)
-
-    fine_freqs = cf.get_fine_freqs(fstate.frequencies)
-    
-    # Read Catalog:
-    Catalog = np.loadtxt(catalogue_filepath)
-
-    # Galaxy parameters:
-    MHI = Catalog[0]      # HI Mass - SolMass
-    VHI = Catalog[1]      # HI Velocity - km/s
-    i = Catalog[2]        # inclination - radians
-    D = Catalog[3]        # Distance - Mpc
-    z = Catalog[5]        # Redshift 
-    ra = Catalog[6]       # Right Ascension - Degrees
-    dec = Catalog[7]      # Declination - Degrees
-
-    # Busy function parameters:
-    a = Catalog[8]        # Controls peak 
-    b1 = Catalog[9]       # Controls height of one peak in double-peak profile
-    b2 = Catalog[10]      # Controls height of other peak in double-peak profile
-    c = Catalog[11]       # Controls depth of trough
-
-    ## Generate all Spectra from points in catalog into one array V velocity and S flux:
-    sample_size = len(Catalog[0])
-    if isinstance(ngals, int):
-        galaxies_sample = np.random.choice(range(sample_size), ngals, replace=False)
-        
-    else:
-        galaxies_sample = range(sample_size)
-
-    if save_gal_info:
-        np.save('{}_galaxy_sample.npy'.format(filename), galaxies_sample)
-
-
-    # generating their spectra
-    V = []; S = []
-    for j in galaxies_sample:
-        try_M, v, s, w, w_, _, _, _, _ = g.Generate_Spectra(MHI[j], VHI[j], 
-                                                            i[j], D[j], 
-                                                            a=a[j], b1=b1[j], 
-                                                            b2=b2[j], c=c[j])
-    V.append(v)
-    S.append(s)
-
-    profiles = cf.get_resampled_profiles(V, S, z, fine_freqs)
-
-    # upchannelizing
-    heights = cf.upchannelize(profiles, U, R_filepath, norm_filepath)
-
-    pol = 'full'
-    map_catalog(fstate, np.flip(heights, axis=1), nside, pol, ra, dec, filename='{}_input_map.h5'.format(filename), write=True)
-
-    return 0
-
-
 
