@@ -1,11 +1,8 @@
 import numpy as np
 from savetools import make_map, map_catalog, write_map
 from frequencies import FreqState
-import channelization_functions as cf
 import Generate_HI_Spectra as g
 from GalaxyCatalog import GalaxyCatalog
-import matplotlib.pyplot as plt
-import subprocess
 import healpy as hp
 import h5py
 import os

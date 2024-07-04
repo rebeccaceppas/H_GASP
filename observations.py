@@ -1,8 +1,8 @@
 """
 Classes and functions for mock observation steps
 
-- up-channelization
 - beam transfer matrices
+- up-channelization
 - visibilities
 - noisy visibilities
 - visibilities with calibration errors
@@ -14,6 +14,79 @@ import h5py
 import numpy as np
 import frequencies as fr
 from savetools import write_map
+import yaml
+import os
+
+class BeamTransferMatrices():
+
+    def __init__(self, f_start, f_end, nfreq, output_directory,
+                 CHORDdec_pointing=0, 
+                 n_dishes_ew=11, n_dishes_ns=6, spacing_ew=6.3, spacing_ns=8.5, dish_diameter=6.0,
+                 beam_spec='airy', Tsys=30, ndays=1, auto_correlation=False):
+        
+        '''defaults are for CHORD pathfinder pointing at zenith'''
+
+        self.f_start = f_start
+        self.f_end = f_end
+        self.nfreq = nfreq
+
+        self.elevation = get_elevation(CHORDdec_pointing)
+
+        self.n_dishes_ew = n_dishes_ew
+        self.n_dises_ns = n_dishes_ns
+        self.spacing_ew = spacing_ew
+        self.spacing_ns = spacing_ns
+        
+        self.dish_diameter = dish_diameter
+        self.beam_spec = beam_spec
+        self.Tsys = Tsys
+        self.ndays = ndays
+        self.auto_correlation = auto_correlation
+
+        self.output_directory = output_directory
+    
+    def change_config(self):
+        '''updates the template config file beam.yaml to represent the desired instrument.
+           creates a new file beam.yaml in the output directory specified.'''
+
+        with open('beam.yaml') as istream:
+            ymldoc = yaml.safe_load(istream)
+            ymldoc['telescope']['freq_start'] = self.f_start
+            ymldoc['telescope']['freq_end'] = self.f_end
+            ymldoc['telescope']['num_freq'] = self.nfreq
+            ymldoc['telescope']['elevation_start'] = self.elevation
+            ymldoc['telescope']['elevation_end'] = self.elevation
+            ymldoc['telescope']['ndays'] = self.ndays
+            ymldoc['telescope']['layout_spec']['grid_ew'] = self.n_dishes_ew
+            ymldoc['telescope']['layout_spec']['grid_ns'] = self.n_dises_ns
+            ymldoc['telescope']['layout_spec']['spacing_ew'] = self.spacing_ew
+            ymldoc['telescope']['layout_spec']['spacing_ns'] = self.spacing_ns
+            ymldoc['telescope']['beam_spec']['diameter'] = self.dish_diameter
+            ymldoc['telescope']['beam_spec']['type'] = self.beam_spec
+            ymldoc['telescope']['tsys_flat'] = float(self.Tsys)
+            ymldoc['telescope']['auto_correlation'] = self.auto_correlation
+            ymldoc['config']['output_directory'] = self.output_directory
+        istream.close()
+
+        with open(self.output_directory+'/beam.yaml', 'w') as ostream:
+            yaml.dump(ymldoc, ostream, default_flow_style=False, sort_keys=False)
+
+    def get_beam_transfer_matrices(self):
+
+        self.change_config()
+
+        package_path= '/project/6002277/ssiegel/chord/chord_env/modules/chord/chord_pipeline/2022.11/lib/python3.10/site-packages/drift/scripts/makeproducts.py '
+        action = 'run {}beam.yaml '.format(self.output_directory)
+        log = '&> {}beam.log'.format(self.output_directory)
+
+        command = package_path + action + log
+
+        os.system('srun python ' + command)
+
+
+
+
+
 
 class Upchannelization():
 
@@ -102,6 +175,10 @@ class Visibilities():
     def __init__(self, map_path) -> None:
         
         self.map = map_path
+
+    def change_config(self):
+
+        pass
 
     def get_visibilities(self):
 
@@ -194,8 +271,9 @@ def open_maps(map_paths, output_name):
                 freqs,
                 f_width)
 
-
-def _write_map(map_filepath, sky_map, freqs, f_width, include_pol=True):
-    # maybe have it here but probably worth it to have it in savetools.py 
-    # or another file for this sort of utilities
-    pass
+def get_elevation(pointing):
+    '''Calculates the elevation relative to CHORD zenith in degrees.
+       Positive is north of zenith, negative is south of zenith.'''
+    zenith = 49.3207092194
+    elevation = pointing - zenith
+    return elevation
