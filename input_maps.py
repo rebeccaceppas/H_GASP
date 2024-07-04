@@ -1,11 +1,13 @@
 import numpy as np
-from savetools import make_map, map_catalog
+from savetools import make_map, map_catalog, write_map
 from frequencies import FreqState
 import channelization_functions as cf
 import Generate_HI_Spectra as g
 from GalaxyCatalog import GalaxyCatalog
 import matplotlib.pyplot as plt
 import subprocess
+import healpy as hp
+import h5py
 
 
 class HIGalaxies():
@@ -159,31 +161,49 @@ class Foregrounds():
     and one complete one with all the ones combined?
     '''
 
-    def __init__(self, f_start, f_end, nfreq, nside):
+    def __init__(self, f_start, f_end, nfreq, nside, output_directory):
         
         self.f_start = f_start
         self.f_end = f_end
         self.nfreq = nfreq
         self.nside = nside
+        self.output_directory = output_directory
         self.pol = 'full'
 
     def get_component(self, component_name):
 
-        subprocess.call('cora-makesky ')
+        command = '{} --nside={} --freq {} {} {} --pol={} --filename={}'.format(component_name,
+                                                                                  self.nside,
+                                                                                  self.f_start,
+                                                                                  self.f_end,
+                                                                                  self.pol,
+                                                                                  self.output_directory+component_name+'.h5')
 
-        'cora-makesky 21cm --nside=64 --freq 998.0 993.0 100 --pol=full --filename=post_eor_signal_map.h5'
-
-        pass
+        subprocess.call(['cora-makesky', command])
 
     def get_maps(self, component_names_list):
         '''gets all simulated maps and combines them for a full foreground map'''
 
+        fstate = FreqState()
+        fstate.freq = (self.f_start, self.f_end, self.nfreq)
+
+        foregrounds_all = np.zeros((self.nfreq, 4, hp.nside2npix(self.nside)))
+
         for component in component_names_list:
             
+            filename = self.output_directory + component + '.h5'
             self.get_component(component)
+            foregrounds_all += open_map(filename)
+
+        write_map(self.output_directory+'foregrounds_all.h5',
+                  foregrounds_all,
+                  fstate.frequencies,
+                  fstate.freq_width)
+        
 
 
-        pass
+
+
 
     
 
@@ -262,7 +282,13 @@ def get_spectra(filepath, ngals=None, seed=0):
     return V, S, np.array(zs), ras, decs
 
 
+def open_map(filepath):
 
+    f = h5py.File(filepath)
+    m = f['map'][:]
+    f.close()
+
+    return m
 
 
 
