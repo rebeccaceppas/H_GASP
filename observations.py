@@ -80,8 +80,8 @@ class BeamTransferMatrices():
         self.change_config()
 
         package_path= '/project/6002277/ssiegel/chord/chord_env/modules/chord/chord_pipeline/2022.11/lib/python3.10/site-packages/drift/scripts/makeproducts.py '
-        action = 'run {}beam.yaml '.format(self.output_directory)
-        log = '&> {}beam.log'.format(self.output_directory)
+        action = 'run {}/beam.yaml '.format(self.output_directory)
+        log = '&> {}/beam.log'.format(self.output_directory)
 
         command = package_path + action + log
 
