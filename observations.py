@@ -53,8 +53,8 @@ class BeamTransferMatrices():
 
         with open('beam.yaml') as istream:
             ymldoc = yaml.safe_load(istream)
-            ymldoc['telescope']['freq_start'] = self.f_start
-            ymldoc['telescope']['freq_end'] = self.f_end
+            ymldoc['telescope']['freq_start'] = float(self.f_start)
+            ymldoc['telescope']['freq_end'] = float(self.f_end)
             ymldoc['telescope']['num_freq'] = self.nfreq
             ymldoc['telescope']['elevation_start'] = self.elevation
             ymldoc['telescope']['elevation_end'] = self.elevation
