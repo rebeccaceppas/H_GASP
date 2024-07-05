@@ -73,6 +73,8 @@ class BeamTransferMatrices():
 
     def get_beam_transfer_matrices(self):
 
+        '''submits the job for simulating the btm with drift makeproducts'''
+
         self.change_config()
 
         package_path= '/project/6002277/ssiegel/chord/chord_env/modules/chord/chord_pipeline/2022.11/lib/python3.10/site-packages/drift/scripts/makeproducts.py '
@@ -82,10 +84,6 @@ class BeamTransferMatrices():
         command = package_path + action + log
 
         os.system('srun python ' + command)
-
-
-
-
 
 
 class Upchannelization():
@@ -172,13 +170,49 @@ class Upchannelization():
 
 class Visibilities():
 
-    def __init__(self, map_path) -> None:
+    def __init__(self, output_directory, btm_directory, map_filepaths=[], map_tags=[], output_filename='') -> None:
         
-        self.map = map_path
+        self.output_directory = output_directory
+        self.btm_directory = btm_directory
+        self.map_filepaths = map_filepaths
+        self.map_tags = map_tags
+
+        if output_filename == '':
+            self.output_filename = self.output_directory+'/sstream_{{tag}}.h5'
+        else:
+            self.output_filename = self.output_directory+'/'+output_filename
+
+        ## need to check that the map_filepaths is the same length as the map_tags
+
+        self.n_maps = len(map_filepaths)
 
     def change_config(self):
 
-        pass
+        with open("simulate.yaml") as istream:
+            ymldoc = yaml.safe_load(istream)
+            ymldoc['cluster']['directory'] = self.output_directory+'/visibilities_info'
+            ymldoc['pipeline']['tasks'][1]['params']['product_directory'] = self.btm_directory
+
+            # add the data for the first map
+            ymldoc['pipeline']['tasks'][2]['params']['maps'][0]['files'][0] = self.map_filepaths[0]
+            ymldoc['pipeline']['tasks'][2]['params']['maps'][0]['tag'] = self.map_tags[0]
+
+            if self.n_maps > 1:
+                # need to loop through the map filepaths and the map tags
+                for i, file in enumerate(self.map_filepaths[1:]):
+                    j = i+1
+                    tag = self.map_tags[j]
+                    new_section = {'tag': tag,
+                                   'files': [file]}
+                    ymldoc['pipeline']['tasks'][2]['params']['maps'].append(new_section)
+
+            ymldoc['pipeline']['tasks'][3]['params']['output_name'] = self.output_filename
+        istream.close()
+
+        with open(self.output_directory+"/simulate.yaml", "w") as ostream:
+            yaml.dump(ymldoc, ostream, default_flow_style=False, sort_keys=False)
+        ostream.close()
+
 
     def get_visibilities(self):
 
