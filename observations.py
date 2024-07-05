@@ -213,11 +213,19 @@ class Visibilities():
             yaml.dump(ymldoc, ostream, default_flow_style=False, sort_keys=False)
         ostream.close()
 
-
     def get_visibilities(self):
 
-        # code to get visibilities
-        pass
+        '''submits the job for simulating the btm with caput pipeline'''
+
+        self.change_config()
+
+        package_path = '/project/6002277/ssiegel/chord/chord_env/modules/chord/chord_pipeline/2022.11/lib/python3.10/site-packages/caput/scripts/runner.py '
+        action = 'run {}/simulate.yaml '.format(self.output_directory)
+        log = '&> {}/visibilities.log'.format(self.output_directory)
+
+        command = package_path + action + log
+        os.system('srun python ' + command)
+
 
     def _add_noise(self):
         pass
