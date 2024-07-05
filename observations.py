@@ -170,20 +170,13 @@ class Upchannelization():
 
 class Visibilities():
 
-    def __init__(self, output_directory, btm_directory, map_filepaths=[], map_tags=[], output_filename='') -> None:
+    def __init__(self, output_directory, btm_directory, maps_tag, map_filepaths=[]) -> None:
         
         self.output_directory = output_directory
         self.btm_directory = btm_directory
         self.map_filepaths = map_filepaths
-        self.map_tags = map_tags
-
-        if output_filename == '':
-            self.output_filename = self.output_directory+'/sstream_{{tag}}.h5'
-        else:
-            self.output_filename = self.output_directory+'/'+output_filename
-
-        ## need to check that the map_filepaths is the same length as the map_tags
-
+        self.maps_tag = maps_tag
+        self.output_filename = self.output_directory+'/sstream_{tag}.h5'
         self.n_maps = len(map_filepaths)
 
     def change_config(self):
@@ -192,21 +185,21 @@ class Visibilities():
             ymldoc = yaml.safe_load(istream)
             ymldoc['cluster']['directory'] = self.output_directory+'/visibilities_info'
             ymldoc['pipeline']['tasks'][1]['params']['product_directory'] = self.btm_directory
-
-            # add the data for the first map
-            ymldoc['pipeline']['tasks'][2]['params']['maps'][0]['files'][0] = self.map_filepaths[0]
-            ymldoc['pipeline']['tasks'][2]['params']['maps'][0]['tag'] = self.map_tags[0]
-
-            if self.n_maps > 1:
-                # need to loop through the map filepaths and the map tags
-                for i, file in enumerate(self.map_filepaths[1:]):
-                    j = i+1
-                    tag = self.map_tags[j]
-                    new_section = {'tag': tag,
-                                   'files': [file]}
-                    ymldoc['pipeline']['tasks'][2]['params']['maps'].append(new_section)
-
+            
+            # sidereal sstream
             ymldoc['pipeline']['tasks'][3]['params']['output_name'] = self.output_filename
+            ymldoc['pipeline']['tasks'][3]['params']['tag'] = self.maps_tag
+            
+            # load map tag
+            ymldoc['pipeline']['tasks'][2]['params']['maps'][0]['tag'] = self.maps_tag
+
+            # add the data for the maps
+            ymldoc['pipeline']['tasks'][2]['params']['maps'][0]['files'][0] = self.map_filepaths[0]
+            
+            if self.n_maps > 1:
+                for file in self.map_filepaths[1:]:
+                    ymldoc['pipeline']['tasks'][2]['params']['maps'][0]['files'].append(file)
+                                           
         istream.close()
 
         with open(self.output_directory+"/simulate.yaml", "w") as ostream:
