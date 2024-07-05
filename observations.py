@@ -48,8 +48,6 @@ class BeamTransferMatrices():
     def change_config(self):
         '''updates the template config file beam.yaml to represent the desired instrument.
            creates a new file beam.yaml in the output directory specified.'''
-        
-        print('changing config')
 
         with open('beam.yaml') as istream:
             ymldoc = yaml.safe_load(istream)
@@ -72,8 +70,6 @@ class BeamTransferMatrices():
 
         with open(self.output_directory+'/beam.yaml', 'w') as ostream:
             yaml.dump(ymldoc, ostream, default_flow_style=False, sort_keys=False)
-            
-        print('done changing config')
 
     def get_beam_transfer_matrices(self):
 
