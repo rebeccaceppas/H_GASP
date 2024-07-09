@@ -16,6 +16,8 @@ import frequencies as fr
 from savetools import write_map
 import yaml
 import os
+import noise
+from draco.analysis import mapmaker, transform, flagging
 
 class BeamTransferMatrices():
 
@@ -132,7 +134,7 @@ class Upchannelization():
 
         print('The exact frequency specifications of this observation are:')
         print('f_start = {}, f_end = {}, nfreq = {}.'.format(f_start, f_end, nfreq))
-        print('Use these exact values when computing the beam transfer matrices with drift.')
+        print('Use these exact values when computing the beam transfer matrices with drift. They are returned by this function.')
 
         if catalog:
 
@@ -152,7 +154,7 @@ class Upchannelization():
             print('Channelized map saved at', self.output_directory + self.output_name)
 
         else:
-            # open the input maps tp up-channelize
+            # open the input maps to up-channelize
             # combine all maps into 1
             open_maps(map_paths,
                   self.output_directory + 'full_input.h5')
@@ -166,6 +168,8 @@ class Upchannelization():
                             self.output_directory + self.output_name)
             
             print('Channelized map saved at', self.output_directory + self.output_name)
+
+        return f_start, f_end, nfreq
 
 
 class Visibilities():
@@ -220,58 +224,88 @@ class Visibilities():
         os.system('srun python ' + command)
 
 
-    def _add_noise(self):
-        pass
-
-    def _add_calibration_errors(self):
-        pass
-
-
-class NoisyVisibilities(Visibilities):
-
-    def __init__(self, map_path) -> None:
-        super().__init__(map_path)
-
-    def _add_noise(self):
-        return super()._add_noise()
-    
-
-class CalibrationErrorVisibilities(Visibilities):
-
-    def __init__(self, map_path) -> None:
-        super().__init__(map_path)
-
-    def _add_calibration_errors(self):
-        return super()._get_visibilities()
-
-
 class RealisticVisibilities(Visibilities):
 
-    def _add_noise(self):
-        return super()._add_noise()
+    '''the reason we use inheritance is so that we have access to the file names and other
+       important info from the Visibilities that have been simulated.'''
 
-    def _add_calibration_errors(self):
-        return super()._add_calibration_errors()    
+    def __init__(self, ndays, Tsys=30,) -> None:
 
+        self.manager = noise.get_manager(self.btm_directory)
+        self.ndays = ndays
+        self.tsys = Tsys
+
+        sstream_file = self.output_directory + '/sstream_{}.h5'.format(self.maps_tag)
+        self.data = noise.get_sstream(self.btm_directory, sstream_file)
+        
+
+    def add_noise_calibration_errors(self, amplitude_errors_filepath, phase_errors_filepath, upchannelized=True, norm_filepath=''):
+
+        '''if it's not upchannelized, add the standard gaussian noise, otherwise, do the normalized gauss'''
+
+        dict_stream = {'recv_temp': self.tsys, 
+               'ndays': self.ndays}
+
+        if upchannelized:
+            norm = np.load(norm_filepath)
+
+            noisy = noise.NormalizedNoise()
+            noisy.setup(self.manager)
+            noisy.read_config(dict_stream)
+            noisy_data = noisy.process(self.data, norm, amplitude_errors_filepath, phase_errors_filepath)
+
+        else:
+            noisy = noise.GaussianNoise()
+            noisy.setup(self.manager)
+            noisy.read_config(dict_stream)
+            noisy_data = noisy.process(self.data, amplitude_errors_filepath, phase_errors_filepath)
+
+        return noisy_data
+                    
 
 class DirtyMap():
 
-    def __init__(self, nside, beam_path, auto_correlations=False) -> None:
+    def __init__(self, data, output_filepath, fstate, nside, btm_directory, auto_correlation=False) -> None:
 
-        self.nside = nside
-        self.auto_correlations = auto_correlations
-        self.beam_path = beam_path
+        self.btm_directory = btm_directory
 
-    
-    def compute_mmodes(self, visibilities_path):
+        self.manager = noise.get_manager(btm_directory)
+        self.data = data
 
+        self.dict_mask = {'auto_correlations': auto_correlation}
+        self.dict_map = {'nside': nside}
 
+        self.output_filepath = output_filepath
 
-        pass
+        self.fstate = fstate
 
-    def compute_dirty_mao(self):
+    def compute_mmodes(self):
 
-        pass
+        mmodes = transform.MModeTransform()
+        mmodes.setup(self.manager)
+        Mmodes = mmodes.process(self.data)
+
+        # if auto_correlation was set to False this will mask it out
+        # otherwise it will stay the same
+        mmodes_masked = flagging.MaskMModeData()
+        mmodes_masked.read_config(self.dict_mask)
+        Mmodes_masked = mmodes_masked.process(Mmodes)
+
+        self.mmodes = Mmodes_masked
+
+    def get_dirty_map(self):
+
+        self.compute_mmodes()
+
+        dm = mapmaker.DirtyMapMaker()
+        dm.read_config(self.dict_map)
+        dm.setup(self.manager)
+        m = dm.process(self.mmodes)
+
+        map_ = m['map'][:]
+        write_map(self.output_filepath, 
+                  map_, self.fstate.frequencies, self.fstate.freq_width, 
+                  include_pol=True)
 
 
 

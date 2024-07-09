@@ -53,7 +53,7 @@ class GaussianNoise(task.SingleTask, random.RandomTask):
         else:
             self.telescope = None
 
-    def process(self, data):
+    def process(self, data, amplitude_error_filepath, phase_error_filepath):
         """Generate a noisy dataset.
 
         Parameters
@@ -74,7 +74,7 @@ class GaussianNoise(task.SingleTask, random.RandomTask):
         visdata = data.vis[:]
 
         # Adding calibration errors
-        G = calibration_errors(visdata.shape, filename = 'generic file name - change once imported to pipeline')
+        G = calibration_errors(visdata, amplitude_error_filepath, phase_error_filepath)
         visdata = np.multiply(G, visdata)
         data.vis[:] = visdata
 
@@ -175,7 +175,7 @@ class NormalizedNoise(task.SingleTask, random.RandomTask):
         else:
             self.telescope = None
 
-    def process(self, data, norm):
+    def process(self, data, norm, amplitude_error_filepath, phase_error_filepath):
         """Generate a noisy dataset.
 
         Parameters
@@ -196,7 +196,7 @@ class NormalizedNoise(task.SingleTask, random.RandomTask):
         visdata = data.vis[:]
 
         # Adding calibration errors
-        G = calibration_errors(visdata.shape, filename = 'generic file name - change once imported to pipeline')
+        G = calibration_errors(visdata, amplitude_error_filepath, phase_error_filepath)
         visdata = np.multiply(G, visdata)
         data.vis[:] = visdata
 
@@ -261,9 +261,9 @@ class NormalizedNoise(task.SingleTask, random.RandomTask):
 
         return data
 
-def calibration_errors(visdata, filename='calibrations.npy'):
+def calibration_errors(visdata, amplitude_errors_filepath, phase_errors_filepath,):
      
-    phase_draw, amp_draw = get_calibration_errors(visdata.shape, filename = filename)
+    phase_draw, amp_draw = get_calibration_errors(amplitude_errors_filepath, phase_errors_filepath, visdata.shape)
     G = (1+amp_draw/100)*np.exp(1j*phase_draw)
 
     return G
