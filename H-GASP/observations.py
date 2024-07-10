@@ -17,7 +17,6 @@ from savetools import write_map
 import yaml
 import os
 import noise
-from draco.analysis import mapmaker, transform, flagging
 
 class BeamTransferMatrices():
 
@@ -267,6 +266,8 @@ class DirtyMap():
 
     def __init__(self, data, output_filepath, fstate, nside, btm_directory, auto_correlation=False) -> None:
 
+        
+
         self.btm_directory = btm_directory
 
         self.manager = noise.get_manager(btm_directory)
@@ -281,6 +282,8 @@ class DirtyMap():
 
     def compute_mmodes(self):
 
+        from draco.analysis import transform, flagging
+
         mmodes = transform.MModeTransform()
         mmodes.setup(self.manager)
         Mmodes = mmodes.process(self.data)
@@ -294,6 +297,8 @@ class DirtyMap():
         self.mmodes = Mmodes_masked
 
     def get_dirty_map(self):
+
+        from draco.analysis import mapmaker
 
         self.compute_mmodes()
 
