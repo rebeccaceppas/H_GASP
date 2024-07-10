@@ -6,7 +6,7 @@ from caput.time import STELLAR_S
 from draco.util import random
 from drift.core import manager
 import h5py
-from error_sampling import get_calibration_errors
+from H_GASP import error_sampling as es
 
 _default_bitgen = np.random.SFC64(seed=247479859775347473167578167923530262728)
 _rng = np.random.Generator(_default_bitgen)
@@ -74,7 +74,7 @@ class GaussianNoise(task.SingleTask, random.RandomTask):
         visdata = data.vis[:]
 
         # Adding calibration errors
-        G = get_calibration_errors(amplitude_error_filepath, phase_error_filepath, visdata.shape)
+        G = es.get_calibration_errors(amplitude_error_filepath, phase_error_filepath, visdata.shape)
         visdata = np.multiply(G, visdata)
         data.vis[:] = visdata
 
@@ -196,7 +196,7 @@ class NormalizedNoise(task.SingleTask, random.RandomTask):
         visdata = data.vis[:]
 
         # Adding calibration errors
-        G = get_calibration_errors(amplitude_error_filepath, phase_error_filepath, visdata.shape)
+        G = es.get_calibration_errors(amplitude_error_filepath, phase_error_filepath, visdata.shape)
         visdata = np.multiply(G, visdata)
         data.vis[:] = visdata
 

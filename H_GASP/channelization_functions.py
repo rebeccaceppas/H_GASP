@@ -1,9 +1,9 @@
 import numpy as np
 import numexpr as ne 
-from GalaxyCatalog import GalaxyCatalog
-import Generate_HI_Spectra as g
+from H_GASP import GalaxyCatalog
+from H_GASP import Generate_HI_Spectra as g
 import h5py
-from savetools import write_map, map_catalog
+from H_GASP import savetools
 from scipy import interpolate
 
 ############################# helper functions ##############################
@@ -456,7 +456,7 @@ def channelize_map(U, fstate, map_path, R_path, norm_path, freq_path, fine_freqs
     for i in range(len(responses)):
         map_[:, 0, i] = np.flip(responses[i])
         
-    write_map(output_path, map_, fstate.frequencies, fstate.freq_width, include_pol=True)
+    savetools.write_map(output_path, map_, fstate.frequencies, fstate.freq_width, include_pol=True)
     
     
 
@@ -543,7 +543,7 @@ def get_resampled_profiles(V, S, z, fine_freqs, b_max=77):
 
     # converting km/s -> MHz given z and mJy -> MHz
     # outputs them from high to low freq
-    profile = GalaxyCatalog(V, S, z, b_max=b_max)
+    profile = GalaxyCatalog.GalaxyCatalog(V, S, z, b_max=b_max)
 
     freqs = profile.obs_freq
     temps = profile.T
@@ -601,6 +601,6 @@ def channelize_catalogue(U, fstate, nside, catalogue_path, R_path, norm_path, fr
     pol = 'full'
 
     print('Generating map')
-    map_catalog(fstate, np.flip(responses, axis=1), nside, pol, ra, dec, filename=output_path, write=True)
+    savetools.map_catalog(fstate, np.flip(responses, axis=1), nside, pol, ra, dec, filename=output_path, write=True)
 
     return np.flip(responses)

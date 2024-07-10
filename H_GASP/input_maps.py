@@ -1,8 +1,8 @@
 import numpy as np
-from savetools import make_map, map_catalog, write_map
-from frequencies import FreqState
-import Generate_HI_Spectra as g
-from GalaxyCatalog import GalaxyCatalog
+from H_GASP import savetools
+from H_GASP import frequencies as fr
+from H_GASP import Generate_HI_Spectra as g
+from H_GASP import GalaxyCatalog
 import healpy as hp
 import h5py
 import os
@@ -65,7 +65,7 @@ class HIGalaxies():
             assert ngals==len(T_brightness), """Your temperature brightness T_brightness must have the same length as your number of galaxies 
             but they have {} and {} respectively.""".format(len(T_brightness), ngals)
 
-        fstate = FreqState()
+        fstate = fr.FreqState()
         fstate.freq = (self.f_start, self.f_end, self.nfreq)
 
         # getting spectra
@@ -74,7 +74,7 @@ class HIGalaxies():
         # converting to K vs MHz and resampling to desired frequencies
         resampled_profiles = np.zeros((len(S), len(fstate.frequencies)))
 
-        profile = GalaxyCatalog(V, S, z, b_max=max_baseline)
+        profile = GalaxyCatalog.GalaxyCatalog(V, S, z, b_max=max_baseline)
         freqs = profile.obs_freq
         temps = profile.T
 
@@ -94,7 +94,7 @@ class HIGalaxies():
 
             resampled_profiles = resampled_profiles * np.array(T_brightness).reshape((ngals, -1)) / np.max(resampled_profiles, axis=1).reshape((ngals, -1))
 
-        map_catalog(fstate,
+        savetools.map_catalog(fstate,
                     resampled_profiles,
                     nside,
                     self.pol,
@@ -135,7 +135,7 @@ class SynthesizedBeam():
         - T_brightness: <float>
           brightness of your source. Default is 1.
         '''
-        fstate = FreqState()
+        fstate = fr.FreqState()
         fstate.freq = (self.f_start, self.f_end, self.nfreq)
 
         temps = np.ones(self.nfreq)*T_brightness
@@ -143,7 +143,7 @@ class SynthesizedBeam():
         if output_filename is None:
             output_filename = 'input_RA{0:.2f}_DEC{1:.2f}.h5'.format(ra, dec)
 
-        input_map = make_map(fstate.frequencies,
+        input_map = savetools.make_map(fstate.frequencies,
                              fstate.freq_width,
                          temps,
                          nside, self.pol,
@@ -202,7 +202,7 @@ class Foregrounds():
         - saves an additional file in output_directory with all foreground components combined
           called foregrounds_all.h5
         '''
-        fstate = FreqState()
+        fstate = fr.FreqState()
         fstate.freq = (self.f_start, self.f_end, self.nfreq)
 
         foregrounds_all = np.zeros((self.nfreq, 4, hp.nside2npix(self.nside)))
@@ -213,7 +213,7 @@ class Foregrounds():
             self.get_component(component)
             foregrounds_all += open_map(filename)
 
-        write_map(self.output_directory+'foregrounds_all.h5',
+        savetools.write_map(self.output_directory+'foregrounds_all.h5',
                   foregrounds_all,
                   fstate.frequencies,
                   fstate.freq_width)

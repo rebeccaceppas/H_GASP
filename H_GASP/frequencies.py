@@ -1,5 +1,5 @@
 import numpy as np
-import channelization_functions as cf
+from H_GASP import channelization_functions as cf
 
 class FreqState(object):
     ## Code snipet modified from radiocosmology package https://github.com/radiocosmology ##

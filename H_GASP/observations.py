@@ -9,14 +9,15 @@ Classes and functions for mock observation steps
 - dirty maps
 """
 
-import channelization_functions as cf
+from H_GASP import channelization_functions as cf
+from H_GASP import noise
+from H_GASP import frequencies as fr
+from H_GASP import savetools
 import h5py
 import numpy as np
-import frequencies as fr
-from savetools import write_map
 import yaml
 import os
-import noise
+
 
 class BeamTransferMatrices():
 
@@ -308,7 +309,7 @@ class DirtyMap():
         m = dm.process(self.mmodes)
 
         map_ = m['map'][:]
-        write_map(self.output_filepath, 
+        savetools.write_map(self.output_filepath, 
                   map_, self.fstate.frequencies, self.fstate.freq_width, 
                   include_pol=True)
 
@@ -341,7 +342,7 @@ def open_maps(map_paths, output_name):
     print('Writing file {} containing the input maps {}.'.format(output_name,
                                                                  map_paths))
 
-    write_map(output_name,
+    savetools.write_map(output_name,
                 sky_map,
                 freqs,
                 f_width)
