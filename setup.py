@@ -13,7 +13,7 @@ setup(
     packages=find_packages(),
     install_requires=['h5py',
                       'numpy',
-                      'yaml',
+                      'pyyaml',
                       'os',  # maybe wont need
                       'numexpr',
                       'scipy',
