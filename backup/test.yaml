@@ -1,0 +1,72 @@
+setup:
+  - output_folder: main/place/to/save/all
+  
+  - frequencies:
+    U: 2
+    fmax: 1410
+    fmin: 1408
+    f_start: 1409.1082
+    f_end: 2977
+  
+  - telescope:
+    grid_ew:
+    grid_ns:
+    spacing_ew:
+    spacing_ns:
+    tsys:
+    beam_type:
+    dish_size:
+  
+  - observation:
+    ndays:
+    nside:
+    tsys:
+
+tasks:
+- name: simulate_BeamTransferMatrices
+  params:
+    ndish_EW: 6
+    ndish_NS: 11
+
+- name: load_BeamTransferMatrices
+  params:
+    product_directory: /home/rebeccac/scratch
+
+- name: simulate_SynthesizedBeam
+  params:
+    RA: 160
+    dec: 45
+
+- name: simulate_StandardInputMaps
+  params:
+    synchrotron: true
+    HI_galaxies: catalog/file/path or false
+    point_sources: false
+    21cm_background: false
+
+# if false for RA, Dec values means to
+# make them uniformly distributed
+# want to make sure they can also include a range
+# can set an HI mass to match the size of the profile
+# OR can set a max temp to normalize the profile
+# if none is set, then use whatever the catalog returns randomly
+- name: simulate_selectHIMap
+  params:
+    n_sources: 10
+    RA_values: false
+    Dec_values: false
+    HI_mass: false
+    max_temp: false
+
+- name: upchannelize
+  params:
+    U: 2
+
+- name: simulate_Visibilities
+
+- name: add_Noise
+
+- name: add_CalibratioErrors
+
+- name: simulate_DirtyMap
+
