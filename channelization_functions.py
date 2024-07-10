@@ -410,7 +410,7 @@ def upchannelize(spectra, U, R_path, norm_path, freq_path):
 
 ############################# application: up-channelizing healpix map ##############################
 
-def channelize_map(U, map_path, R_path, norm_path, freq_path, fine_freqs, output_path):
+def channelize_map(U, fstate, map_path, R_path, norm_path, freq_path, fine_freqs, output_path):
     '''
     Up-channelizes an entire healpix map
     Works for the file formats of the existing CHORD pipeline
@@ -449,15 +449,16 @@ def channelize_map(U, map_path, R_path, norm_path, freq_path, fine_freqs, output
     responses, frequencies = upchannelize(pixels, U, R_path, norm_path, freq_path)
 
     nfreq = len(frequencies)
-    fwidth = np.abs(frequencies[0] - frequencies[1])
+    #fwidth = np.abs(frequencies[0] - frequencies[1])
     npol = 4
     map_ = np.zeros((nfreq, npol, npix), dtype=np.float64)
 
     for i in range(len(responses)):
         map_[:, 0, i] = np.flip(responses[i])
-
-    # we flip the response and frequencies so the slices go from high to low frequency
-    write_map(output_path, map_, np.flip(frequencies), fwidth, include_pol=True)
+        
+    write_map(output_path, map_, fstate.frequencies, fstate.freq_width, include_pol=True)
+    
+    
 
 ############################# application: up-channelizing catalogue of galaxy profiles ##############################
 

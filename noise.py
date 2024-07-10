@@ -74,7 +74,7 @@ class GaussianNoise(task.SingleTask, random.RandomTask):
         visdata = data.vis[:]
 
         # Adding calibration errors
-        G = calibration_errors(visdata, amplitude_error_filepath, phase_error_filepath)
+        G = get_calibration_errors(amplitude_error_filepath, phase_error_filepath, visdata.shape)
         visdata = np.multiply(G, visdata)
         data.vis[:] = visdata
 
@@ -196,7 +196,7 @@ class NormalizedNoise(task.SingleTask, random.RandomTask):
         visdata = data.vis[:]
 
         # Adding calibration errors
-        G = calibration_errors(visdata, amplitude_error_filepath, phase_error_filepath)
+        G = get_calibration_errors(amplitude_error_filepath, phase_error_filepath, visdata.shape)
         visdata = np.multiply(G, visdata)
         data.vis[:] = visdata
 
@@ -261,12 +261,6 @@ class NormalizedNoise(task.SingleTask, random.RandomTask):
 
         return data
 
-def calibration_errors(visdata, amplitude_errors_filepath, phase_errors_filepath,):
-     
-    phase_draw, amp_draw = get_calibration_errors(amplitude_errors_filepath, phase_errors_filepath, visdata.shape)
-    G = (1+amp_draw/100)*np.exp(1j*phase_draw)
-
-    return G
 
 def get_manager(output_folder):
 

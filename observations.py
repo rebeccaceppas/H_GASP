@@ -160,6 +160,7 @@ class Upchannelization():
                   self.output_directory + 'full_input.h5')
             
             cf.channelize_map(self.U,
+                              fstate,
                               self.output_directory + 'full_input.h5',
                             self.output_directory + self.R_filename,
                             self.output_directory + self.norm_filename,
@@ -224,19 +225,18 @@ class Visibilities():
         os.system('srun python ' + command)
 
 
-class RealisticVisibilities(Visibilities):
+class RealisticVisibilities():
 
-    '''the reason we use inheritance is so that we have access to the file names and other
-       important info from the Visibilities that have been simulated.'''
+    '''adds noise and calibration errors to the pristine visibilities.'''
 
-    def __init__(self, ndays, Tsys=30,) -> None:
+    def __init__(self, ndays, btm_directory, output_directory, maps_tag, Tsys=30):
 
-        self.manager = noise.get_manager(self.btm_directory)
+        self.manager = noise.get_manager(btm_directory)
         self.ndays = ndays
         self.tsys = Tsys
 
-        sstream_file = self.output_directory + '/sstream_{}.h5'.format(self.maps_tag)
-        self.data = noise.get_sstream(self.btm_directory, sstream_file)
+        sstream_file = output_directory + 'sstream_{}.h5'.format(maps_tag)
+        self.data = noise.get_sstream(btm_directory, sstream_file)
         
 
     def add_noise_calibration_errors(self, amplitude_errors_filepath, phase_errors_filepath, upchannelized=True, norm_filepath=''):
@@ -329,6 +329,7 @@ def open_maps(map_paths, output_name):
         freqs, f_width, sky_map = load_map(map_paths[0])
 
         for i in range(1,len(map_paths)-1):
+            print(i)
             freqs, f_width, new_map = load_map(map_paths[i])
             sky_map += new_map
 
@@ -339,6 +340,8 @@ def open_maps(map_paths, output_name):
                 sky_map,
                 freqs,
                 f_width)
+    
+    return freqs
 
 def get_elevation(pointing):
     '''Calculates the elevation relative to CHORD zenith in degrees.
