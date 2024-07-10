@@ -4,7 +4,7 @@ VERSION = '0.1.0'
 DESCRIPTION = ''
 
 setup(
-    name='H-GASP',
+    name='H_GASP',
     version=VERSION,
     description=DESCRIPTION,
     url='https://github.com/rebeccaceppas/H-GASP',
