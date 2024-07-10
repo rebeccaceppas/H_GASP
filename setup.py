@@ -14,7 +14,6 @@ setup(
     install_requires=['h5py',
                       'numpy',
                       'pyyaml',
-                      'os',  # maybe wont need
                       'numexpr',
                       'scipy',
                       'healpy',
