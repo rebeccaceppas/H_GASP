@@ -1,7 +1,12 @@
 from setuptools import setup, find_packages
 
+VERSION = '1.0'
+DESCRIPTION = ''
+
 setup(
     name='H-GASP',
+    version=VERSION,
+    description=DESCRIPTION,
     url='https://github.com/rebeccaceppas/H-GASP',
     author='Rebecca Ceppas de Castro',
     author_email='rebecca@ceppas.co',
@@ -13,5 +18,8 @@ setup(
                       'numexpr',
                       'scipy',
                       'healpy',
-                      'astropy']
+                      'astropy'],
+    classifiers=[
+        'Programming Language :: Python :: 3'
+    ]
 )
