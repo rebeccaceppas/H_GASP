@@ -292,7 +292,7 @@ def get_spectra(filepath, ngals=None, seed=0):
     return V, S, np.array(zs), ras, decs
 
 def open_map(filepath):
-
+    '''opens an h5py map'''
     f = h5py.File(filepath)
     m = f['map'][:]
     f.close()
