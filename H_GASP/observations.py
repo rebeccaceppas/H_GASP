@@ -10,7 +10,8 @@ Classes and functions for mock observation steps
 """
 
 from H_GASP import channelization_functions as cf
-from H_GASP import noise
+from H_GASP import utilities
+#from H_GASP import noise
 from H_GASP import frequencies as fr
 from H_GASP import savetools
 import h5py
@@ -50,8 +51,10 @@ class BeamTransferMatrices():
     def change_config(self):
         '''updates the template config file beam.yaml to represent the desired instrument.
            creates a new file beam.yaml in the output directory specified.'''
+        
+        dir = utilities.find_h_gasp_directory()
 
-        with open('beam.yaml') as istream:
+        with open(dir / 'config_files' / 'beam.yaml') as istream:
             ymldoc = yaml.safe_load(istream)
             ymldoc['telescope']['freq_start'] = float(self.f_start)
             ymldoc['telescope']['freq_end'] = float(self.f_end)
@@ -186,7 +189,9 @@ class Visibilities():
 
     def change_config(self):
 
-        with open("simulate.yaml") as istream:
+        dir = utilities.find_h_gasp_directory()
+
+        with open(dir / 'config_files' / 'simulate.yaml') as istream:
             ymldoc = yaml.safe_load(istream)
             ymldoc['cluster']['directory'] = self.output_directory+'/visibilities_info'
             ymldoc['pipeline']['tasks'][1]['params']['product_directory'] = self.btm_directory

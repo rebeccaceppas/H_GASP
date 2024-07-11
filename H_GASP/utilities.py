@@ -2,7 +2,18 @@
 
 import numpy as np
 from astropy import constants, units
+from pathlib import Path
+import os
 
+
+###### find location of the H_GASP directory to locate the files and modules needed #####
+
+def find_h_gasp_directory():
+    start_search_path = Path.home()
+    for root, dirs, files in os.walk(start_search_path):
+        if 'H_GASP' in dirs:
+            return Path(root) / 'H_GASP'
+    return None
 
 ###### for beam width estimates ########
 

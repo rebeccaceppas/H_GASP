@@ -46,21 +46,5 @@ pipeline:
     out: sstack
     params:
       save: true
-      output_name: /home/rebeccac/scratch/pipeline/output/sstream_{{tag}}.h5
-  - type: draco.analysis.transform.MModeTransform
-    requires: manager
-    in: sstack
-    out: mmodes
-  - type: draco.analysis.flagging.MaskMModeData
-    in: mmodes
-    out: masked_mmodes
-    params:
-      auto_correlations: False
-  - type: draco.analysis.mapmaker.DirtyMapMaker
-    requires: manager
-    in: masked_mmodes
-    out: map_dirty
-    params:
-      nside: 128
-      save: true
-      output_name: /home/rebeccac/scratch/pipeline/output/dirty_map_{{tag}}.h5
+      tag: HI_gals
+      output_name: /home/rebeccac/scratch/pipeline/output/sstream_{tag}.h5
