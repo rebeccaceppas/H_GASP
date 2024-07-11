@@ -1,0 +1,15 @@
+# these are the packages required for the pipeline and an example of versions that have worked
+# they should all be available if you load the chord pipeline on cedar
+
+- python=3.12.3
+- numpy=1.26.4
+-numexpr=2.8.7
+- h5py=3.11.0
+- scipy=1.13.1
+- astropy=6.1.0
+- healpy=1.16.6
+- pyyaml=6.0.1
+- cora
+- drift
+- draco
+- caput
