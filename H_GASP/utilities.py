@@ -9,13 +9,12 @@ import os
 ###### find location of the H_GASP directory to locate the files and modules needed #####
 
 def find_h_gasp_directory():
-    start_search_path = Path.home()
-    print('start', start_search_path)
+    start_search_path = Path.home() / 'scratch'
     for root, dirs, files in os.walk(start_search_path):
-        #print('dir', dirs)
         if 'H_GASP' in dirs:
-            print('found', Path(root) / 'H_GASP')
             return Path(root) / 'H_GASP'
+        
+    print('Please move the H_GASP directory to your scratch space.')
     return None
 
 ###### for beam width estimates ########
