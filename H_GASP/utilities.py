@@ -10,8 +10,11 @@ import os
 
 def find_h_gasp_directory():
     start_search_path = Path.home()
+    print('start', start_search_path)
     for root, dirs, files in os.walk(start_search_path):
+        #print('dir', dirs)
         if 'H_GASP' in dirs:
+            print('found', Path(root) / 'H_GASP')
             return Path(root) / 'H_GASP'
     return None
 
