@@ -54,7 +54,7 @@ class BeamTransferMatrices():
         
         directory = utilities.find_h_gasp_directory()
 
-        with open(directory / 'config_files/beam.yaml') as istream:
+        with open(directory / 'resources/beam.yaml') as istream:
             ymldoc = yaml.safe_load(istream)
             ymldoc['telescope']['freq_start'] = float(self.f_start)
             ymldoc['telescope']['freq_end'] = float(self.f_end)
@@ -191,7 +191,7 @@ class Visibilities():
 
         directory = utilities.find_h_gasp_directory()
 
-        with open(directory / 'config_files/simulate.yaml') as istream:
+        with open(directory / 'resources/simulate.yaml') as istream:
             ymldoc = yaml.safe_load(istream)
             ymldoc['cluster']['directory'] = self.output_directory+'/visibilities_info'
             ymldoc['pipeline']['tasks'][1]['params']['product_directory'] = self.btm_directory

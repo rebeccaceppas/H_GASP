@@ -40,7 +40,7 @@ dish_diameter = 6.0
 ndays = 100
 
 ###### creating input maps: one with all galaxies in the galaxy catalog and one with cora-makesky foregrounds ######
-catalog_filepath = './HI_Catalog.txt'
+catalog_filepath = '/home/rebeccac/scratch/H_GASP/resources/HIMF_dec45_VolLim_10000.txt'
 HIgals_filename = 'HI_gals.h5'
 hi_gals = im.HIGalaxies(catalog_filepath, fmax, fmin, nfreq)
 hi_gals.get_map(nside, output_directory+HIgals_filename)
@@ -97,8 +97,8 @@ vis.get_visibilities()
 
 ############# adding noise and calibration errors ##############
 
-amplitude_errors_filepath = '/home/rebeccac/scratch/H_GASP/tutorials/visibility_amplitude_errors.npy'
-phase_errors_filepath = '/home/rebeccac/scratch/H_GASP/tutorials/visibility_phase_errors.npy'
+amplitude_errors_filepath = '/home/rebeccac/scratch/H_GASP/resources/visibility_amplitude_errors.npy'
+phase_errors_filepath = '/home/rebeccac/scratch/H_GASP/resources/visibility_phase_errors.npy'
 
 real_vis_obs = obs.RealisticVisibilities(ndays, btm_directory, output_directory, maps_tag)    
 real_vis = real_vis_obs.add_noise_calibration_errors(amplitude_errors_filepath,
