@@ -1,9 +1,9 @@
 import sys
 
-sys.path.append('/home/rebeccac/scratch/H-GASP')
+sys.path.append('/home/rebeccac/scratch/H_GASP')
 
-import observations as obs
-import frequencies as fr
+from H_GASP import observations as obs
+from H_GASP import frequencies as fr
 
 fmax = 1420
 fmin = 1419
