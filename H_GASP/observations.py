@@ -11,7 +11,7 @@ Classes and functions for mock observation steps
 
 from H_GASP import channelization_functions as cf
 from H_GASP import utilities
-from H_GASP import noise
+
 from H_GASP import frequencies as fr
 from H_GASP import savetools
 import h5py
@@ -236,6 +236,8 @@ class RealisticVisibilities():
 
     def __init__(self, ndays, btm_directory, output_directory, maps_tag, Tsys=30):
 
+        from H_GASP import noise
+
         self.manager = noise.get_manager(btm_directory)
         self.ndays = ndays
         self.tsys = Tsys
@@ -245,6 +247,8 @@ class RealisticVisibilities():
         
 
     def add_noise_calibration_errors(self, amplitude_errors_filepath, phase_errors_filepath, upchannelized=True, norm_filepath=''):
+
+        from H_GASP import noise
 
         '''if it's not upchannelized, add the standard gaussian noise, otherwise, do the normalized gauss'''
 
@@ -272,7 +276,7 @@ class DirtyMap():
 
     def __init__(self, data, output_filepath, fstate, nside, btm_directory, auto_correlation=False) -> None:
 
-        
+        from H_GASP import noise
 
         self.btm_directory = btm_directory
 
