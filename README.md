@@ -27,3 +27,5 @@ module load chord/chord_pipeline/2023.06
 2. Because this will be used on cedar, installing packages is not trivial so instead you can clone this repository into your scratch directory and import the modules from there. 
 
 For tasks that don't consume a lot of compute power or memory, the modules can be used in an interactive node on cedar. For example, the full_run.py script in the tutorial walks you through how to use most of the pipeline for a small test case (low number of dishes and of frequency channels). This entire script can be ran in an interactive node with no problem and in under 1 hour. Interactive nodes can also be used if, for example, you already have the beam transfer matrices and up-channelization response matrix computed. A template job script (pipeline.sh) is also provided if you have a larger job to submit.
+
+The resources folder contains the template config files, sample calibration errors, and the mock HI galaxy catalogs created by Akanksha Bij.
