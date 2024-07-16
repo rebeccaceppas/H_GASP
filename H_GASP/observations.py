@@ -11,7 +11,6 @@ Classes and functions for mock observation steps
 
 from H_GASP import channelization_functions as cf
 from H_GASP import utilities
-
 from H_GASP import frequencies as fr
 from H_GASP import savetools
 import h5py
@@ -33,7 +32,7 @@ class BeamTransferMatrices():
         self.f_end = f_end
         self.nfreq = nfreq
 
-        self.elevation = get_elevation(CHORDdec_pointing)
+        self.elevation = utilities.get_elevation(CHORDdec_pointing)
 
         self.n_dishes_ew = n_dishes_ew
         self.n_dises_ns = n_dishes_ns
@@ -358,9 +357,3 @@ def open_maps(map_paths, output_name):
     
     return freqs
 
-def get_elevation(pointing):
-    '''Calculates the elevation relative to CHORD zenith in degrees.
-       Positive is north of zenith, negative is south of zenith.'''
-    zenith = 49.3207092194
-    elevation = pointing - zenith
-    return elevation

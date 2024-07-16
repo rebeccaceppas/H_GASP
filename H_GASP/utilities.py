@@ -17,6 +17,14 @@ def find_h_gasp_directory():
     print('Please move the H_GASP directory to your scratch space.')
     return None
 
+###### elevation of the pointing from zenith as required in radio cosmology pipeline ######
+def get_elevation(pointing):
+    '''Calculates the elevation relative to CHORD zenith in degrees.
+       Positive is north of zenith, negative is south of zenith.'''
+    zenith = 49.3207092194
+    elevation = pointing - zenith
+    return elevation
+
 ###### for beam width estimates ########
 
 def calculate_baseline_lengths(Ndishes_ns, Ndishes_ew, spacing_ns, spacing_ew):
