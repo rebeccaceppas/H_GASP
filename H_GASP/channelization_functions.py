@@ -2,9 +2,11 @@ import numpy as np
 import numexpr as ne 
 from H_GASP import GalaxyCatalog
 from H_GASP import Generate_HI_Spectra as g
+from H_GASP.input_maps import get_spectra
 import h5py
 from H_GASP import savetools
 from scipy import interpolate
+import warnings
 
 ############################# helper functions ##############################
 
@@ -79,8 +81,14 @@ def get_chans(fmax_chan, fmin_chan, fmin=300, number_channels=2048, sampling_rat
     - array corresponding to the coarse channel indices
       for the chosen frequency range and instrumental parameters
     '''
-    min_chan = np.floor(freq_unit_strip(fmin_chan, fmin, number_channels, sampling_rate))
-    max_chan = np.ceil(freq_unit_strip(fmax_chan, fmin, number_channels, sampling_rate))
+    if fmax_chan < fmin_chan:
+      warnings.warn(f'Your maximum frequency {fmax_chan} is smaller than your minimum frequency {fmin_chan}.\n Assuming fmax_chan = {fmin_chan}, fmin_chan = {fmax_chan}.')
+      min_chan = np.floor(freq_unit_strip(fmax_chan, fmin, number_channels, sampling_rate))
+      max_chan = np.ceil(freq_unit_strip(fmin_chan, fmin, number_channels, sampling_rate))
+
+    else:
+      min_chan = np.floor(freq_unit_strip(fmin_chan, fmin, number_channels, sampling_rate))
+      max_chan = np.ceil(freq_unit_strip(fmax_chan, fmin, number_channels, sampling_rate))
 
     return np.arange(min_chan, max_chan + 1)
 
@@ -104,7 +112,7 @@ def get_fine_freqs(coarse_frequencies):
     dc = coarse_frequencies[1] - coarse_frequencies[0] 
     return np.arange(fmax, fmin, dc / 3) 
 
-def window(index, taps=4, N=4096): # window function
+def window(index, taps=4, N=4096):
     '''
     Sinc-Hanning window function
 
@@ -347,7 +355,7 @@ def get_response_matrix(freqs, U, min_freq, max_freq,
     
     c = np.reshape(coarse_chans, (1, len(coarse_chans))).astype(int)
 
-    # generating response matrix - will eventually replace this step to simply load up the needed matrix file
+    # generating response matrix
     R = response_mtx(c, f, U, taps=taps, N=N)
 
     chans = np.arange(c.min()-0.5 + 1/(2*U), c.max() + 0.5, 1/U) 
@@ -449,7 +457,6 @@ def channelize_map(U, fstate, map_path, R_path, norm_path, freq_path, fine_freqs
     responses, frequencies = upchannelize(pixels, U, R_path, norm_path, freq_path)
 
     nfreq = len(frequencies)
-    #fwidth = np.abs(frequencies[0] - frequencies[1])
     npol = 4
     map_ = np.zeros((nfreq, npol, npix), dtype=np.float64)
 
@@ -461,60 +468,6 @@ def channelize_map(U, fstate, map_path, R_path, norm_path, freq_path, fine_freqs
     
 
 ############################# application: up-channelizing catalogue of galaxy profiles ##############################
-
-def read_catalogue(filepath):
-    '''
-    Function to open the galaxy catalogue, retrieve velocity and flux readings.
-
-    Inputs
-    - filepath: <str>
-      path to the text file containing the catalog
-
-
-    Outputs
-    - V: <array>
-      the velocities for each profile in km/s
-    - S: <array>
-      spectral flux density for each profile in mJy
-    - ra: <array>
-      Right Ascension of each source
-    - dec: <array>
-      Declination of each source
-    '''
-    
-    Catalogue = np.loadtxt(filepath)
-    MHI = Catalogue[0]      # HI Mass - SolMass
-    VHI = Catalogue[1]      # HI Velocity - km/s
-    i = Catalogue[2]        # inclination - radians
-    D = Catalogue[3]        # Distance - Mpc
-    W50 = Catalogue[4]      # FWHM width - km/s
-    z = Catalogue[5]        # Redshift 
-    ra = Catalogue[6]       # Right Ascension - Degrees
-    dec = Catalogue[7]      # Declination - Degrees
-
-    # Busy function parameters:
-    a = Catalogue[8]        # Controls peak 
-    b1 = Catalogue[9]       # Controls height of one peak in double-peak profile
-    b2 = Catalogue[10]      # Controls height of other peak in double-peak profile
-    c = Catalogue[11]       # Controls depth of trough
-
-    sample_size = len(MHI)
-    print('Generating spectra for {} galaxies.'.format(sample_size))
-
-    V = []; S = []; ras = []; decs = []; zs = []
-    for j in range(sample_size):
-        _, v, s, _, _, _, _, _, _ = g.Generate_Spectra(MHI[j], 
-                                                            VHI[j], 
-                                                            i[j], 
-                                                            D[j], 
-                                                            a=a[j], b1=b1[j], b2=b2[j], c=c[j])
-        V.append(v)
-        S.append(s)
-        ras.append(ra[j])
-        decs.append(dec[j])
-        zs.append(z[j])
-
-    return V, S, np.array(zs), ras, decs
 
 def get_resampled_profiles(V, S, z, fine_freqs, b_max=77):
     '''
@@ -590,7 +543,7 @@ def channelize_catalogue(U, fstate, nside, catalogue_path, R_path, norm_path, fr
     '''
     
     # getting velocity and flux from catalogue
-    V, S, z, ra, dec = read_catalogue(catalogue_path)
+    V, S, z, ra, dec = get_spectra(catalogue_path)
 
     # resampling and converting into profiles in frequency space
     profiles = get_resampled_profiles(V, S, z, fine_freqs, b_max=b_max)
