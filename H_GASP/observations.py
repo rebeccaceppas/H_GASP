@@ -21,7 +21,7 @@ import os
 
 class BeamTransferMatrices():
 
-    def __init__(self, f_start, f_end, nfreq, output_directory,
+    def __init__(self, f_start, f_end, nfreq, output_directory, H_GASP_path,
                  CHORDdec_pointing=0, 
                  n_dishes_ew=11, n_dishes_ns=6, spacing_ew=6.3, spacing_ns=8.5, dish_diameter=6.0,
                  beam_spec='airy', Tsys=30, ndays=1, auto_correlation=False):
@@ -45,15 +45,14 @@ class BeamTransferMatrices():
         self.ndays = ndays
         self.auto_correlation = auto_correlation
 
-        self.output_directory = output_directory
+        self.output_directory = utilities.correct_directory(output_directory)
+        self.H_GASP = utilities.correct_directory(H_GASP_path)
     
     def change_config(self):
         '''updates the template config file beam.yaml to represent the desired instrument.
            creates a new file beam.yaml in the output directory specified.'''
         
-        directory = utilities.find_h_gasp_directory()
-
-        with open(directory / 'resources/beam.yaml') as istream:
+        with open(self.H_GASP + 'resources/beam.yaml') as istream:
             ymldoc = yaml.safe_load(istream)
             ymldoc['telescope']['freq_start'] = float(self.f_start)
             ymldoc['telescope']['freq_end'] = float(self.f_end)
@@ -82,8 +81,8 @@ class BeamTransferMatrices():
         self.change_config()
 
         package_path= '/project/6002277/ssiegel/chord/chord_env/modules/chord/chord_pipeline/2022.11/lib/python3.10/site-packages/drift/scripts/makeproducts.py '
-        action = 'run {}/beam.yaml '.format(self.output_directory)
-        log = '&> {}/beam.log'.format(self.output_directory)
+        action = 'run {}beam.yaml '.format(self.output_directory)
+        log = '&> {}beam.log'.format(self.output_directory)
 
         command = package_path + action + log
 
@@ -98,7 +97,7 @@ class Upchannelization():
         self.fmax = fmax
         self.fmin = fmin
         self.output_name = output_filename
-        self.output_directory = output_directory
+        self.output_directory = utilities.correct_directory(output_directory)
         self.R_filename = R_filename
         self.norm_filename = norm_filename
         self.freqs_matrix_filename = freqs_matrix_filename
@@ -177,22 +176,22 @@ class Upchannelization():
 
 class Visibilities():
 
-    def __init__(self, output_directory, btm_directory, maps_tag, map_filepaths=[]) -> None:
+    def __init__(self, output_directory, btm_directory, H_GASP_path, maps_tag, map_filepaths=[]) -> None:
         
-        self.output_directory = output_directory
-        self.btm_directory = btm_directory
+        self.output_directory = utilities.correct_directory(output_directory)
+        self.btm_directory = utilities.correct_directory(btm_directory)
+        self.H_GASP = utilities.correct_directory(H_GASP_path)
+
         self.map_filepaths = map_filepaths
         self.maps_tag = maps_tag
-        self.output_filename = self.output_directory+'/sstream_{tag}.h5'
+        self.output_filename = self.output_directory+'sstream_{tag}.h5'
         self.n_maps = len(map_filepaths)
 
     def change_config(self):
 
-        directory = utilities.find_h_gasp_directory()
-
-        with open(directory / 'resources/simulate.yaml') as istream:
+        with open(self.H_GASP + 'resources/simulate.yaml') as istream:
             ymldoc = yaml.safe_load(istream)
-            ymldoc['cluster']['directory'] = self.output_directory+'/visibilities_info'
+            ymldoc['cluster']['directory'] = self.output_directory+'visibilities_info'
             ymldoc['pipeline']['tasks'][1]['params']['product_directory'] = self.btm_directory
             
             # sidereal sstream
@@ -211,7 +210,7 @@ class Visibilities():
                                            
         istream.close()
 
-        with open(self.output_directory+"/simulate.yaml", "w") as ostream:
+        with open(self.output_directory+"simulate.yaml", "w") as ostream:
             yaml.dump(ymldoc, ostream, default_flow_style=False, sort_keys=False)
         ostream.close()
 
@@ -222,8 +221,8 @@ class Visibilities():
         self.change_config()
 
         package_path = '/project/6002277/ssiegel/chord/chord_env/modules/chord/chord_pipeline/2022.11/lib/python3.10/site-packages/caput/scripts/runner.py '
-        action = 'run {}/simulate.yaml '.format(self.output_directory)
-        log = '&> {}/visibilities.log'.format(self.output_directory)
+        action = 'run {}simulate.yaml '.format(self.output_directory)
+        log = '&> {}visibilities.log'.format(self.output_directory)
 
         command = package_path + action + log
         os.system('srun python ' + command)

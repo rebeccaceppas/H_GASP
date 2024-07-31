@@ -1,6 +1,7 @@
 import numpy as np
 from H_GASP import savetools
 from H_GASP import frequencies as fr
+from H_GASP import utilities
 from H_GASP import Generate_HI_Spectra as g
 from H_GASP import GalaxyCatalog
 import healpy as hp
@@ -138,6 +139,8 @@ class SynthesizedBeam():
         fstate = fr.FreqState()
         fstate.freq = (self.f_start, self.f_end, self.nfreq)
 
+        output_directory = utilities.correct_directory(output_directory)
+
         temps = np.ones(self.nfreq)*T_brightness
 
         if output_filename is None:
@@ -170,7 +173,7 @@ class Foregrounds():
         self.f_end = f_end
         self.nfreq = nfreq
         self.nside = nside
-        self.output_directory = output_directory
+        self.output_directory = utilities.correct_directory(output_directory)
         self.pol = 'full'
 
     def get_component(self, component_name):

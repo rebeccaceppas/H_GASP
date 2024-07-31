@@ -2,20 +2,16 @@
 
 import numpy as np
 from astropy import constants, units
-from pathlib import Path
-import os
 
 
-###### find location of the H_GASP directory to locate the files and modules needed #####
+###### make sure the directory inputs have correct format #####
 
-def find_h_gasp_directory():
-    start_search_path = Path.home() / 'scratch'
-    for root, dirs, files in os.walk(start_search_path):
-        if 'H_GASP' in dirs:
-            return Path(root) / 'H_GASP'
-        
-    print('Please move the H_GASP directory to your scratch space.')
-    return None
+def correct_directory(directory):
+    '''Makes sure that the path will be completed by added a / if missing.'''
+    if directory[-1] != '/':
+        return directory+'/'
+    else:
+        return directory
 
 ###### elevation of the pointing from zenith as required in radio cosmology pipeline ######
 def get_elevation(pointing):
