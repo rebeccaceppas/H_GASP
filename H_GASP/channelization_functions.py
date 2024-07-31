@@ -2,7 +2,6 @@ import numpy as np
 import numexpr as ne 
 from H_GASP import GalaxyCatalog
 from H_GASP import Generate_HI_Spectra as g
-from H_GASP.input_maps import get_spectra
 import h5py
 from H_GASP import savetools
 from scipy import interpolate
@@ -245,6 +244,8 @@ def scaling(U):
     elif U == 16: k = 7.437551472089143e-12
     elif U == 32: k = 3.701749876806638e-12
     elif U == 64: k = 1.847847543734494e-12
+    else:
+        raise('U can only be a power of 2 between [1, 64].')
     return k
 
 ############################# main computations ##############################
@@ -557,3 +558,76 @@ def channelize_catalogue(U, fstate, nside, catalogue_path, R_path, norm_path, fr
     savetools.map_catalog(fstate, np.flip(responses, axis=1), nside, pol, ra, dec, filename=output_path, write=True)
 
     return np.flip(responses)
+
+def get_spectra(filepath, ngals=None, seed=0):
+    '''
+    Function to open the galaxy catalogue, retrieve velocity and flux readings.
+
+    Inputs
+    ------
+    - filepath: <str>
+      path to the text file containing the catalog
+    - ngals: <int> or <None>
+      number of galaxies to include from the catalog
+      default is None which includes all galaxies from catalog
+    - seed: <int>
+      seed for the random sample of galaxies to select
+
+
+    Outputs
+    -------
+    - V: <array>
+      the velocities for each profile in km/s
+    - S: <array>
+      spectral flux density for each profile in mJy
+    - ra: <array>
+      Right Ascension of each source
+    - dec: <array>
+      Declination of each source
+    '''
+    Catalogue = np.loadtxt(filepath)
+    MHI = Catalogue[0]      # HI Mass - SolMass
+    VHI = Catalogue[1]      # HI Velocity - km/s
+    i = Catalogue[2]        # inclination - radians
+    D = Catalogue[3]        # Distance - Mpc
+    W50 = Catalogue[4]      # FWHM width - km/s
+    z = Catalogue[5]        # Redshift 
+    ra = Catalogue[6]       # Right Ascension - Degrees
+    dec = Catalogue[7]      # Declination - Degrees
+
+    # Busy function parameters:
+    a = Catalogue[8]        # Controls peak 
+    b1 = Catalogue[9]       # Controls height of one peak in double-peak profile
+    b2 = Catalogue[10]      # Controls height of other peak in double-peak profile
+    c = Catalogue[11]       # Controls depth of trough
+
+    V = []; S = []; ras = []; decs = []; zs = []
+
+    if ngals is None:
+        ngals = len(MHI)
+        print('Generating spectra for {} galaxies.'.format(ngals))
+        
+        for j in range(ngals):
+            _, v, s, _, _, _, _, _, _ = g.Generate_Spectra(MHI[j], VHI[j], i[j], D[j], 
+                                                            a=a[j], b1=b1[j], b2=b2[j], c=c[j])
+            V.append(v)
+            S.append(s)
+            ras.append(ra[j])
+            decs.append(dec[j])
+            zs.append(z[j])
+
+    else:
+        np.random.seed(seed)
+        js = np.random.choice(np.arange(0, len(MHI)), size=ngals, replace=False)
+        print('Generating spectra for {} galaxies.'.format(ngals))
+
+        for j in js:
+            _, v, s, _, _, _, _, _, _ = g.Generate_Spectra(MHI[j], VHI[j], i[j], D[j], 
+                                                            a=a[j], b1=b1[j], b2=b2[j], c=c[j])
+            V.append(v)
+            S.append(s)
+            ras.append(ra[j])
+            decs.append(dec[j])
+            zs.append(z[j])
+
+    return V, S, np.array(zs), ras, decs
