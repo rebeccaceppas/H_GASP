@@ -24,7 +24,7 @@ nfreq  = 40  # this is the frequency of the map creation
              # if you are going to up-channelize the map, you can keep this
              # large enough so the shapes of the profiles are not lost pre upchan
 nside = 128
-output_directory = '/home/rebeccac/scratch/H_GASP/tutorials/full_run'
+output_directory = '/home/rebeccac/scratch/H_GASP/tutorials/full_run/'
 
 U = 2
 
@@ -56,8 +56,8 @@ fg.get_maps(components)
 ############## up-channelizing the maps ################
 
 # list of all the maps to up-channelize
-map_paths = [output_directory+'/'+HIgals_filename,
-             output_directory+'/foregrounds_all.h5']
+map_paths = [output_directory+HIgals_filename,
+             output_directory+'foregrounds_all.h5']
 
 upchan_filename = 'upchan_map.h5'
 R_filename = 'R_{}_{}_{}.npy'.format(fmax, fmin, U)
@@ -101,19 +101,16 @@ vis.get_visibilities()
 
 ############# adding noise and calibration errors ##############
 
-amplitude_errors_filepath = '/home/rebeccac/scratch/H_GASP/resources/visibility_amplitude_errors.npy'
-phase_errors_filepath = '/home/rebeccac/scratch/H_GASP/resources/visibility_phase_errors.npy'
-
 real_vis_obs = obs.RealisticVisibilities(ndays, btm_directory, output_directory, maps_tag)    
 real_vis = real_vis_obs.add_noise(upchannelized=True,
-                                  norm_filepath=output_directory+'/'+norm_filename)
+                                  norm_filepath=output_directory+norm_filename)
 
 ############# getting dirty map #################
 
 dirty_map_filename = 'dirty_map.h5'
 
 dm = obs.DirtyMap(real_vis, 
-                  output_directory+'/'+dirty_map_filename,
+                  output_directory+dirty_map_filename,
                   fstate, nside, btm_directory)
 
 dm.get_dirty_map()
