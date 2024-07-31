@@ -8,7 +8,10 @@ module load chord/chord_pipeline/2023.06
 
 import sys
 
-sys.path.append('/home/rebeccac/scratch/H_GASP')
+# change this to the path where you've cloned the pipeline
+H_GASP_path = '/home/rebeccac/scratch/H_GASP'
+
+sys.path.append(H_GASP_path)
 
 from H_GASP import input_maps as im
 from H_GASP import observations as obs
@@ -21,7 +24,7 @@ nfreq  = 40  # this is the frequency of the map creation
              # if you are going to up-channelize the map, you can keep this
              # large enough so the shapes of the profiles are not lost pre upchan
 nside = 128
-output_directory = '/home/rebeccac/scratch/H_GASP/tutorials/full_run/'
+output_directory = '/home/rebeccac/scratch/H_GASP/tutorials/full_run'
 
 U = 2
 
@@ -81,7 +84,8 @@ fstate.freq = (f_start, f_end, nfreqU)
 # choosing the save the matrices in the output directory but can decide on something else
 btm_directory = output_directory
 
-btm = obs.BeamTransferMatrices(f_start, f_end, nfreqU, output_directory, CHORDdec_pointing,
+btm = obs.BeamTransferMatrices(f_start, f_end, nfreqU, output_directory, H_GASP_path,
+                               CHORDdec_pointing,
                                n_dishes_ew, n_dishes_ns, spacing_ew, spacing_ns,
                                dish_diameter, ndays=ndays)
 
@@ -92,7 +96,7 @@ btm.get_beam_transfer_matrices()
 maps_tag = 'HIcatalog_foregrounds'  # a single tag to remember which components were in the input maps
 map_filepaths = [output_directory+upchan_filename]
 
-vis = obs.Visibilities(output_directory, btm_directory, maps_tag, map_filepaths)
+vis = obs.Visibilities(output_directory, btm_directory, H_GASP_path, maps_tag, map_filepaths)
 vis.get_visibilities()
 
 ############# adding noise and calibration errors ##############
