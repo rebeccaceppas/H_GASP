@@ -240,11 +240,11 @@ class RealisticVisibilities():
         self.ndays = ndays
         self.tsys = Tsys
 
-        sstream_file = output_directory + 'sstream_{}.h5'.format(maps_tag)
+        sstream_file = utilities.correct_directory(output_directory) + 'sstream_{}.h5'.format(maps_tag)
         self.data = noise.get_sstream(btm_directory, sstream_file)
         
 
-    def add_noise_calibration_errors(self, amplitude_errors_filepath, phase_errors_filepath, upchannelized=True, norm_filepath=''):
+    def add_noise(self, upchannelized=True, norm_filepath=''):
 
         from H_GASP import noise
 
@@ -259,13 +259,13 @@ class RealisticVisibilities():
             noisy = noise.NormalizedNoise()
             noisy.setup(self.manager)
             noisy.read_config(dict_stream)
-            noisy_data = noisy.process(self.data, norm, amplitude_errors_filepath, phase_errors_filepath)
+            noisy_data = noisy.process(self.data, norm)
 
         else:
             noisy = noise.GaussianNoise()
             noisy.setup(self.manager)
             noisy.read_config(dict_stream)
-            noisy_data = noisy.process(self.data, amplitude_errors_filepath, phase_errors_filepath)
+            noisy_data = noisy.process(self.data)
 
         return noisy_data
                     

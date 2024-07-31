@@ -46,7 +46,7 @@ ndays = 100
 catalog_filepath = '/home/rebeccac/scratch/H_GASP/resources/HIMF_dec45_VolLim_10000.txt'
 HIgals_filename = 'HI_gals.h5'
 hi_gals = im.HIGalaxies(catalog_filepath, fmax, fmin, nfreq)
-hi_gals.get_map(nside, output_directory+HIgals_filename)
+hi_gals.get_map(nside, output_directory+'/'+HIgals_filename)
 
 
 components = ['foreground', '21cm']
@@ -56,8 +56,8 @@ fg.get_maps(components)
 ############## up-channelizing the maps ################
 
 # list of all the maps to up-channelize
-map_paths = [output_directory+HIgals_filename,
-             output_directory+'foregrounds_all.h5']
+map_paths = [output_directory+'/'+HIgals_filename,
+             output_directory+'/foregrounds_all.h5']
 
 upchan_filename = 'upchan_map.h5'
 R_filename = 'R_{}_{}_{}.npy'.format(fmax, fmin, U)
@@ -105,16 +105,15 @@ amplitude_errors_filepath = '/home/rebeccac/scratch/H_GASP/resources/visibility_
 phase_errors_filepath = '/home/rebeccac/scratch/H_GASP/resources/visibility_phase_errors.npy'
 
 real_vis_obs = obs.RealisticVisibilities(ndays, btm_directory, output_directory, maps_tag)    
-real_vis = real_vis_obs.add_noise_calibration_errors(amplitude_errors_filepath,
-                                                     phase_errors_filepath,
-                                                       norm_filepath=output_directory+norm_filename)
+real_vis = real_vis_obs.add_noise(upchannelized=True,
+                                  norm_filepath=output_directory+'/'+norm_filename)
 
 ############# getting dirty map #################
 
 dirty_map_filename = 'dirty_map.h5'
 
 dm = obs.DirtyMap(real_vis, 
-                  output_directory+dirty_map_filename,
+                  output_directory+'/'+dirty_map_filename,
                   fstate, nside, btm_directory)
 
 dm.get_dirty_map()
