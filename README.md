@@ -9,7 +9,7 @@ End-to-end simulation pipeline for HI galaxy surveys focused on the performance 
 - Semi-realistics input map simulations (HI galaxies, synchrotron, cosmological 21 cm emission, etc)
 - Up-channelization tools
 - Pristine visibilities
-- Visibilities with noise and/or calibration errors
+- Visibilities with noise
 - Dirty maps
 - Full end-to-end simulations with a full HI mock catalog
 - Full end-to-end simulations with an arbitrary number of sources at specific locations or following some desired distribution.
