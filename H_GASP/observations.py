@@ -5,7 +5,6 @@ Classes and functions for mock observation steps
 - up-channelization
 - visibilities
 - noisy visibilities
-- visibilities with calibration errors
 - dirty maps
 """
 
@@ -20,13 +19,47 @@ import os
 
 
 class BeamTransferMatrices():
-
+    '''Class to hold parameters and methods to simulate beam transfer matrices (BTM)
+       Defaults are for CHORD pathfinder pointing at zenith'''
     def __init__(self, f_start, f_end, nfreq, output_directory, H_GASP_path,
-                 CHORDdec_pointing=0, 
+                 CHORDdec_pointing=49.3207092194, 
                  n_dishes_ew=11, n_dishes_ns=6, spacing_ew=6.3, spacing_ns=8.5, dish_diameter=6.0,
-                 beam_spec='airy', Tsys=30, ndays=1, auto_correlation=False):
+                 beam_spec='airy', Tsys=30, ndays=1, auto_correlation=True):
         
-        '''defaults are for CHORD pathfinder pointing at zenith'''
+        '''
+        - f_start, f_end: <float>
+          The starting and ending frequency for which to perform the simulation.
+          Can be set by the user if there are pre-made maps.
+          If up-channelization is being used, these will be output by the upchannelize method.
+        - nfreq: <int>
+          Number of frequency channels to do this simulation for.
+          Can be set by user with a minimum of nfreq = 2.
+          If up-channelization is being used, this will be output by the upchannelize method.
+        - output_directory: <str>
+          Path and name of directory under which to store the BTM
+        - H_GASP_path: <str>
+          Path to where H_GASP has been cloned. Required for retrieving the config files.
+        - CHORDdec_pointing: <float>
+          Desired Declination to which we point CHORD in degrees.
+          Default is zenith.
+        - n_dishes_ew, n_dishes_ns: <int>
+          Number of dishes in the East-West and North-South directions.
+        - spacing_ew, spacing_ns: <float>
+          Spacing between the center of the dishes in the East-West and North-South directions.
+          The values should be in meters.
+        - dish_diameter: <float>
+          The diameter of each individual dish in meters.
+        - beam_spec: <str>
+          The particular shape of the primary beam of each dish.
+          Options supported by the CHORD pipeline are 'airy', 'gaussian', or 'healpix'.
+          'healpix' is a HEALPixBeam object input by user
+        - Tsys: <float>
+          System temperature in K
+        - ndays: <float>
+          number of days of observation, for noise estimation purposes
+        - auto_correlation: <bool>
+          Whether or not to include the auto-correlation in the computations
+        '''
 
         self.f_start = f_start
         self.f_end = f_end
@@ -76,7 +109,7 @@ class BeamTransferMatrices():
 
     def get_beam_transfer_matrices(self):
 
-        '''submits the job for simulating the btm with drift makeproducts'''
+        '''runs the job for simulating the btm with drift makeproducts'''
 
         self.change_config()
 
@@ -90,8 +123,30 @@ class BeamTransferMatrices():
 
 
 class Upchannelization():
+    '''Class for up-channelizing maps or galaxy catalogs and calcilating important frequencies'''
 
-    def __init__(self, U, fmax, fmin, output_directory, output_filename, R_filename, norm_filename, freqs_matrix_filename) -> None:
+    def __init__(self, U, fmax, fmin, output_directory, output_filename, R_filename, norm_filename, freqs_matrix_filename):
+        '''
+        - U: <int>
+          Up-channelization factor, U = 2^n
+        - fmax, fmin: <float>
+          Maximum and minimum frequencies of interest.
+          The max/min frequencies of the output will be given by the nearest calculated fine channel.
+        - output_directory: <str>
+          The path and directory onto which we save all the products
+        - output_filename: <str>
+          The name with which to save the output file 
+        - R_filename: <str>
+          The file name for the response matrix R. If it has already been simulated this will be
+          used to retrieve it, otherwise this will be the name given to the new file.
+        - norm_filename: <str>
+          The file name for the normalization vector. If it has already been simulated this will be
+          used to retrieve it, otherwise this will be the name given to the new file.
+        - freqs_matrix_filename: <str>
+          The file name for the output frequencies of the up-channelization process.
+          If it has already been simulated this will be used to retrieve it, 
+          otherwise this will be the name given to the new file.
+        '''
         
         self.U = U
         self.fmax = fmax
@@ -104,7 +159,9 @@ class Upchannelization():
         
 
     def get_R_norm(self):
-        # if the R and norm matrices have not already been computed, do it here
+        '''Computes the response matrix R and the normalization vector to remove the modulations
+           This method shoud only be called if these have not yet been computed.'''
+        
         fstate, f_start, f_end, nfreq = fr.get_frequencies(self.fmax, self.fmin, self.U)
         
         fine_freqs = cf.get_fine_freqs(fstate.frequencies)
@@ -129,7 +186,38 @@ class Upchannelization():
                                                                     self.output_directory + self.freqs_matrix_filename))
         
     def upchannelize(self, catalog=False, map_paths='', catalog_filepath='', nside=128, b_max=77):
+        '''
+        Up-channelizes the input map or the input catalog to the specifications given.
 
+        Inputs:
+        ------
+        - catalog: <bool>
+          If set to True, a catalog file path must be provided and an up-channelized map will be created from it.
+          If set to False (default), a map file path must be provided and the algorithm will up-channelize that map.
+        - map_paths: <str> or <list of str>
+          Contains the paths and names of all the maps to up-channelize.
+          If there are multiple maps, they must be given in a list, otherwise a string.
+          A file called full_input.h5 will be created with the sum of all the provided maps.
+        - catalog_filepath: <str>
+          If catalog=True this is the file path to the HI mock catalog from which to create an up-channelized map.
+          This is prefered over first creating a map and then up-channelizing if no other components are needed
+          as it will save memory and prevent information of profile shapes from being lost prematurely.
+        - nside: <int>
+          Sets the resolution of the output map. nside = 2^n.
+        - b_max: <float>
+          Maximum baseline length in your given dish array configuration in metres.
+          The default is for the CHORD pathfinder, to estimate a new one use H_GASP.utilities.calculate_baseline_lengths
+
+        Outputs:
+        -------
+        - creates the up-channelized map and saves to disk
+        - f_start, f_end: <float>
+          Max and min frequencies of the up-channelized map corresponding to the fine channels.
+          These exact values should be used when computing the beam transfer matrices.
+        - nfreq: <int>
+          Number of fine frequency channels.
+          This exact value should be used when computing the beam transfer matrices.
+        '''
         fstate, f_start, f_end, nfreq = fr.get_frequencies(self.fmax, self.fmin, self.U)
         fine_freqs = cf.get_fine_freqs(fstate.frequencies)
 
@@ -175,9 +263,23 @@ class Upchannelization():
 
 
 class Visibilities():
+    '''Class for simulating noiseless visibilities from input sky maps'''
 
-    def __init__(self, output_directory, btm_directory, H_GASP_path, maps_tag, map_filepaths=[]) -> None:
-        
+    def __init__(self, output_directory, btm_directory, H_GASP_path, maps_tag, map_filepaths=[]):
+        '''
+        - output_directory: <str>
+          The path and directory onto which we save all the products
+        - btm_directory: <str>
+          Path to directory containing the beam transfer matrices
+        - H_GASP_path: <str>
+          Path to where H_GASP has been cloned. Required for retrieving the config files.
+        - maps_tag: <str>
+          A tag to add to the file name to remember context, for example which components were in the input maps
+        - map_filepaths: <list of str>
+          Paths and names of all maps to be included in the final visibility simulation.
+          If there is only one map, it should still be given as a str in a list 
+        '''
+
         self.output_directory = utilities.correct_directory(output_directory)
         self.btm_directory = utilities.correct_directory(btm_directory)
         self.H_GASP = utilities.correct_directory(H_GASP_path)
@@ -188,6 +290,8 @@ class Visibilities():
         self.n_maps = len(map_filepaths)
 
     def change_config(self):
+        '''updates the template config file simulate.yaml to perform the visibility task.
+           creates a new file simulate.yaml in the output directory specified.'''
 
         with open(self.H_GASP + 'resources/simulate.yaml') as istream:
             ymldoc = yaml.safe_load(istream)
@@ -215,9 +319,14 @@ class Visibilities():
         ostream.close()
 
     def get_visibilities(self):
+        '''
+        Runs the job for simulating the visibilities with caput pipeline
 
-        '''submits the job for simulating the btm with caput pipeline'''
-
+        Outputs:
+        -------
+        - data: <sstream container>
+          the visibility data container that is needed to simulate dirty maps.
+        '''
         self.change_config()
 
         package_path = '/project/6002277/ssiegel/chord/chord_env/modules/chord/chord_pipeline/2022.11/lib/python3.10/site-packages/caput/scripts/runner.py '
@@ -235,10 +344,22 @@ class Visibilities():
 
 class RealisticVisibilities():
 
-    '''adds noise and calibration errors to the pristine visibilities.'''
+    '''Class for adding noise to pristine visibilities.'''
 
     def __init__(self, ndays, btm_directory, output_directory, maps_tag, Tsys=30):
-
+        '''
+        - ndays: <float>
+          number of days of observation
+        - btm_directory: <str>
+          Path to directory containing the beam transfer matrices
+        - output_directory: <str>
+          The path and directory onto which we save all the products
+        - maps_tag: <str>
+          A tag to add to the file name to remember context, for example which components were in the input maps.
+          This tag was passed on to the Visibilities() object
+        - Tsys: <float>
+          System temperature in K. Default is 30 K.
+        '''
         self.manager = utilities.get_manager(btm_directory)
         self.ndays = ndays
         self.tsys = Tsys
@@ -246,12 +367,28 @@ class RealisticVisibilities():
         sstream_file = utilities.correct_directory(output_directory) + 'sstream_{}.h5'.format(maps_tag)
         self.data = utilities.get_sstream(btm_directory, sstream_file)
         
-
     def add_noise(self, upchannelized=True, norm_filepath=''):
+        '''
+        Adds noise to noiseless visibilities. Adjusts the noise if the map has been up-channelized
+        to account for diving out the coarse channel-scale ripples.
+
+        Inputs:
+        ------
+        - upchannelized: <bool>
+          If True (default) will renormalize the noise variance so that there is a frequency dependent variance
+          from which the Gaussian noise is drawn from for each channel.
+          If False, the noise will be standard Gaussian noise with the same variance at all channels.
+        - norm_filepath: <str>
+          Path to the file containing the normalization vector.
+          Only required if upchannelized is set to True
+
+        Outputs:
+        -------
+        - noisy_data: <sstream container>
+          the noisy visibility data container that is needed to simulate dirty maps.
+        '''
 
         from H_GASP import noise
-
-        '''if it's not upchannelized, add the standard gaussian noise, otherwise, do the normalized gauss'''
 
         dict_stream = {'recv_temp': self.tsys, 
                'ndays': self.ndays}
@@ -275,7 +412,25 @@ class RealisticVisibilities():
 
 class DirtyMap():
 
-    def __init__(self, data, output_filepath, fstate, nside, btm_directory, auto_correlation=False) -> None:
+    def __init__(self, data, output_filepath, fstate, nside, btm_directory, auto_correlation=True):
+        '''
+        - data: <sstream container>
+          The visibility data as output from Visibilities(), RealisticVisibilities().
+          It can also be obtained for a pre-computed visibility matrix with H_GASP.utilities.get_sstream()
+        - output_filepath: <str>
+          Path and name to which we save the computed dirty map
+        - fstate: <FreqState object>
+          From H_GASP.frequencies.FreqState(), contains information about the frequency specifications
+          This is required to agree with the setting of your beam transfer matrices, so
+          fstate = FreqState()
+          fstate.freq = (f_start, f_end, nfreq)
+        - nside: <int>
+          Sets the resolution of the output map. nside = 2^n.
+        - btm_directory: <str>
+          Path to directory containing the beam transfer matrices
+        - auto_correlation: <bool>
+          Whether or not to include the auto-correlation in the computations
+        '''
 
         self.btm_directory = btm_directory
 
@@ -290,7 +445,7 @@ class DirtyMap():
         self.fstate = fstate
 
     def compute_mmodes(self):
-
+        '''Helper method to compute the m-modes using draco.analysis'''
         from draco.analysis import transform, flagging
 
         mmodes = transform.MModeTransform()
@@ -306,7 +461,7 @@ class DirtyMap():
         self.mmodes = Mmodes_masked
 
     def get_dirty_map(self):
-
+        '''Computes and saves dirty map to disk using draco.analysis'''
         from draco.analysis import mapmaker
 
         self.compute_mmodes()
@@ -324,7 +479,7 @@ class DirtyMap():
 
 
 def load_map(map_path):
-
+    '''helper function to load a single map'''
     f = h5py.File(map_path)
     sky_map = np.array(f['map'])
     ff = np.array(f['index_map']['freq'])
@@ -335,7 +490,8 @@ def load_map(map_path):
     return freqs, f_width, sky_map
 
 def open_maps(map_paths, output_name):
-
+    '''helper function to load multiple files
+       saves a new file contianing the sum of all provided maps to disk'''
     if type(map_paths) == str:
         freqs, f_width, sky_map = load_map(map_paths)
 
@@ -355,5 +511,3 @@ def open_maps(map_paths, output_name):
                 freqs,
                 f_width)
     
-    return freqs
-
