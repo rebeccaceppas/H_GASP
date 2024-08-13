@@ -7,8 +7,6 @@ from caput import config
 from draco.core import io, containers, task
 from caput.time import STELLAR_S
 from draco.util import random
-from drift.core import manager
-import h5py
 
 _default_bitgen = np.random.SFC64(seed=247479859775347473167578167923530262728)
 _rng = np.random.Generator(_default_bitgen)
@@ -254,57 +252,3 @@ class NormalizedNoise(task.SingleTask, random.RandomTask):
         return data
 
 
-def get_manager(output_folder):
-
-    pm = manager.ProductManager.from_config(output_folder)
-
-    return pm
-
-def get_telescope(manager):
-    
-    telescope = io.get_telescope(manager)
-
-    return telescope
-
-def get_sstream(manager_folder, sstream_filename):
-
-    pm = get_manager(manager_folder)
-    tel = get_telescope(pm)
-
-    data = h5py.File(sstream_filename)
-
-    freqs = data['index_map']['freq'][:]
-    freqmap = np.array([ii[0] for ii in freqs])
-    vis = data['vis']
-    weight = data['vis_weight']
-    mmax = tel.mmax
-    ntime = 2 * mmax + 1
-    feed_index = tel.input_index
-
-    kwargs = {}
-    if tel.npairs != (tel.nfeed + 1) * tel.nfeed // 2:
-        kwargs["prod"] = tel.index_map_prod
-        kwargs["stack"] = tel.index_map_stack
-        kwargs["reverse_map_stack"] = tel.reverse_map_stack
-
-    else:
-        # Construct a product map as if this was a down selection
-        prod_map = np.zeros(
-            tel.uniquepairs.shape[0], dtype=[("input_a", int), ("input_b", int)]
-        )
-        prod_map["input_a"] = tel.uniquepairs[:, 0]
-        prod_map["input_b"] = tel.uniquepairs[:, 1]
-
-        kwargs["prod"] = prod_map
-
-    sstream = containers.SiderealStream(
-    freq=freqs,
-    ra=ntime,
-    input=feed_index,
-    distributed=True,
-    **kwargs,
-    )
-    sstream.vis[:] = vis
-    sstream.weight[:] = weight
-
-    return sstream

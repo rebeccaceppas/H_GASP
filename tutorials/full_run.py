@@ -97,20 +97,20 @@ maps_tag = 'HIcatalog_foregrounds'  # a single tag to remember which components 
 map_filepaths = [output_directory+upchan_filename]
 
 vis = obs.Visibilities(output_directory, btm_directory, H_GASP_path, maps_tag, map_filepaths)
-vis.get_visibilities()
+visdata = vis.get_visibilities()
 
 ############# adding noise and calibration errors ##############
 
 real_vis_obs = obs.RealisticVisibilities(ndays, btm_directory, output_directory, maps_tag)    
-real_vis = real_vis_obs.add_noise(upchannelized=True,
+noisy_visdata = real_vis_obs.add_noise(upchannelized=True,
                                   norm_filepath=output_directory+norm_filename)
 
 ############# getting dirty map #################
 
 dirty_map_filename = 'dirty_map.h5'
 
-dm = obs.DirtyMap(real_vis, 
-                  output_directory+dirty_map_filename,
+dm = obs.DirtyMap(noisy_visdata,                         # if you want the dirty map of the noiseless visibilities
+                  output_directory+dirty_map_filename,   # pass visdata as the argument instead
                   fstate, nside, btm_directory)
 
 dm.get_dirty_map()

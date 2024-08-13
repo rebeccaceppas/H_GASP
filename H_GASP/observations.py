@@ -227,6 +227,11 @@ class Visibilities():
         command = package_path + action + log
         os.system('srun python ' + command)
 
+        sstream_file = utilities.correct_directory(self.output_directory) + 'sstream_{}.h5'.format(self.maps_tag)
+        data = utilities.get_sstream(self.btm_directory, sstream_file)
+
+        return data
+
 
 class RealisticVisibilities():
 
@@ -234,14 +239,12 @@ class RealisticVisibilities():
 
     def __init__(self, ndays, btm_directory, output_directory, maps_tag, Tsys=30):
 
-        from H_GASP import noise
-
-        self.manager = noise.get_manager(btm_directory)
+        self.manager = utilities.get_manager(btm_directory)
         self.ndays = ndays
         self.tsys = Tsys
 
         sstream_file = utilities.correct_directory(output_directory) + 'sstream_{}.h5'.format(maps_tag)
-        self.data = noise.get_sstream(btm_directory, sstream_file)
+        self.data = utilities.get_sstream(btm_directory, sstream_file)
         
 
     def add_noise(self, upchannelized=True, norm_filepath=''):
@@ -274,11 +277,9 @@ class DirtyMap():
 
     def __init__(self, data, output_filepath, fstate, nside, btm_directory, auto_correlation=False) -> None:
 
-        from H_GASP import noise
-
         self.btm_directory = btm_directory
 
-        self.manager = noise.get_manager(btm_directory)
+        self.manager = utilities.get_manager(btm_directory)
         self.data = data
 
         self.dict_mask = {'auto_correlations': auto_correlation}
