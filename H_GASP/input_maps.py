@@ -130,11 +130,13 @@ class SynthesizedBeam():
           defining the resolution of the created healpix map. nside = 2^n.
         - ra, dec: <float>
           right ascension and declination in degrees
-        - output_filepath: <str>
-          path and filename to which we save the input synthesized beam map
+        - output_directory: <str>
+          path to directory on which to save all the synthesized beam products
+        - output_filename: <str>
+          file name to save the input synthesized beam map
           default None will name it based on ra and dec.
         - T_brightness: <float>
-          brightness of your source. Default is 1.
+          brightness of your source. Default is 1.0.
         '''
         fstate = fr.FreqState()
         fstate.freq = (self.f_start, self.f_end, self.nfreq)
