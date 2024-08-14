@@ -21,7 +21,7 @@ class HIGalaxies():
         - nfreq: <int>
           number of frequencies
         '''
-        self.catalog = catalog_path
+        self.catalog = utilities.get_absolute_path(catalog_path)
         self.f_start = f_start
         self.f_end = f_end
         self.nfreq = nfreq
@@ -141,7 +141,7 @@ class SynthesizedBeam():
         fstate = fr.FreqState()
         fstate.freq = (self.f_start, self.f_end, self.nfreq)
 
-        output_directory = utilities.correct_directory(output_directory)
+        output_directory = utilities.get_absolute_path(output_directory)
 
         temps = np.ones(self.nfreq)*T_brightness
 
@@ -175,7 +175,7 @@ class Foregrounds():
         self.f_end = f_end
         self.nfreq = nfreq
         self.nside = nside
-        self.output_directory = utilities.correct_directory(output_directory)
+        self.output_directory = utilities.get_absolute_path(output_directory)
         self.pol = 'full'
 
     def get_component(self, component_name):

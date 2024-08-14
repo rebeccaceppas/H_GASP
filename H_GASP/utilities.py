@@ -79,6 +79,15 @@ def get_absolute_path(directory):
     
     return correct_directory(os.path.abspath(directory))
 
+def check_create_directory(path):
+    '''Creates a new directory at the requested location if it does not already exist'''
+    abs_path = get_absolute_path(path)
+    if not os.path.exists(abs_path):
+        os.makedirs(abs_path)
+
+        
+
+
 
 
 

@@ -36,7 +36,7 @@ class BeamTransferMatrices():
           Can be set by user with a minimum of nfreq = 2.
           If up-channelization is being used, this will be output by the upchannelize method.
         - output_directory: <str>
-          Path and name of directory under which to store the BTM
+          Path of directory under which to store the BTM
         - H_GASP_path: <str>
           Path to where H_GASP has been cloned. Required for retrieving the config files.
         - CHORDdec_pointing: <float>
@@ -80,6 +80,8 @@ class BeamTransferMatrices():
 
         self.output_directory = utilities.get_absolute_path(output_directory)
         self.H_GASP = utilities.get_absolute_path(H_GASP_path)
+
+        utilities.check_create_directory(self.output_directory)
     
     def change_config(self):
         '''updates the template config file beam.yaml to represent the desired instrument.
@@ -156,8 +158,9 @@ class Upchannelization():
         self.R_filename = R_filename
         self.norm_filename = norm_filename
         self.freqs_matrix_filename = freqs_matrix_filename
-        
 
+        utilities.check_create_directory(self.output_directory)
+        
     def get_R_norm(self):
         '''Computes the response matrix R and the normalization vector to remove the modulations
            This method shoud only be called if these have not yet been computed.'''
@@ -171,12 +174,10 @@ class Upchannelization():
                                                 self.fmin,
                                                 self.fmax)
         
-        try:
-            np.save(self.output_directory+self.R_filename, R)
-            np.save(self.output_directory+self.norm_filename, norm)
-            np.save(self.output_directory+self.freqs_matrix_filename, freqs_matrix)
-        except:
-            print(self.output_directory, 'does not exist. Please create it and try again.')
+        np.save(self.output_directory+self.R_filename, R)
+        np.save(self.output_directory+self.norm_filename, norm)
+        np.save(self.output_directory+self.freqs_matrix_filename, freqs_matrix)
+
 
         print('Up-channelization matrix with shape {} saved to {}.'.format(R.shape,
                                                                            self.output_directory+self.R_filename))
@@ -289,6 +290,8 @@ class Visibilities():
         self.output_filename = self.output_directory+'sstream_{tag}.h5'
         self.n_maps = len(map_filepaths)
 
+        utilities.check_create_directory(self.output_directory)
+
     def change_config(self):
         '''updates the template config file simulate.yaml to perform the visibility task.
            creates a new file simulate.yaml in the output directory specified.'''
@@ -363,6 +366,8 @@ class RealisticVisibilities():
         self.manager = utilities.get_manager(utilities.get_absolute_path(btm_directory))
         self.ndays = ndays
         self.tsys = Tsys
+
+        utilities.check_create_directory(output_directory)
 
         if noiseless_vis_filename == '':
           sstream_file = utilities.get_absolute_path(output_directory) + 'sstream_{}.h5'.format(maps_tag)
@@ -446,6 +451,8 @@ class DirtyMap():
 
         self.dict_mask = {'auto_correlations': auto_correlation}
         self.dict_map = {'nside': nside}
+
+        utilities.check_create_directory(output_directory)
 
         self.output_filepath = utilities.get_absolute_path(output_directory)
 
