@@ -5,6 +5,7 @@ from astropy import constants, units
 import h5py
 from draco.core import io, containers
 from drift.core import manager
+import os
 
 
 ###### for opening and retriving info from pipeline generated files ######
@@ -70,6 +71,16 @@ def correct_directory(directory):
         return directory+'/'
     else:
         return directory
+    
+def get_absolute_path(directory):
+    '''Converts relative paths to absolute paths'''
+    if os.path.isabs(directory):
+        return correct_directory(directory)
+    
+    return correct_directory(os.path.abspath(directory))
+
+
+
 
 ###### elevation of the pointing from zenith as required in radio cosmology pipeline ######
 def get_elevation(pointing):

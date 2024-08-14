@@ -78,8 +78,8 @@ class BeamTransferMatrices():
         self.ndays = ndays
         self.auto_correlation = auto_correlation
 
-        self.output_directory = utilities.correct_directory(output_directory)
-        self.H_GASP = utilities.correct_directory(H_GASP_path)
+        self.output_directory = utilities.get_absolute_path(output_directory)
+        self.H_GASP = utilities.get_absolute_path(H_GASP_path)
     
     def change_config(self):
         '''updates the template config file beam.yaml to represent the desired instrument.
@@ -152,7 +152,7 @@ class Upchannelization():
         self.fmax = fmax
         self.fmin = fmin
         self.output_name = output_filename
-        self.output_directory = utilities.correct_directory(output_directory)
+        self.output_directory = utilities.get_absolute_path(output_directory)
         self.R_filename = R_filename
         self.norm_filename = norm_filename
         self.freqs_matrix_filename = freqs_matrix_filename
@@ -280,9 +280,9 @@ class Visibilities():
           If there is only one map, it should still be given as a str in a list 
         '''
 
-        self.output_directory = utilities.correct_directory(output_directory)
-        self.btm_directory = utilities.correct_directory(btm_directory)
-        self.H_GASP = utilities.correct_directory(H_GASP_path)
+        self.output_directory = utilities.get_absolute_path(output_directory)
+        self.btm_directory = utilities.get_absolute_path(btm_directory)
+        self.H_GASP = utilities.get_absolute_path(H_GASP_path)
 
         self.map_filepaths = map_filepaths
         self.maps_tag = maps_tag
@@ -336,7 +336,7 @@ class Visibilities():
         command = package_path + action + log
         os.system('srun python ' + command)
 
-        sstream_file = utilities.correct_directory(self.output_directory) + 'sstream_{}.h5'.format(self.maps_tag)
+        sstream_file = self.output_directory + 'sstream_{}.h5'.format(self.maps_tag)
         data = utilities.get_sstream(self.btm_directory, sstream_file)
 
         return data
@@ -360,17 +360,17 @@ class RealisticVisibilities():
         - Tsys: <float>
           System temperature in K. Default is 30 K.
         '''
-        self.manager = utilities.get_manager(btm_directory)
+        self.manager = utilities.get_manager(utilities.get_absolute_path(btm_directory))
         self.ndays = ndays
         self.tsys = Tsys
 
         if noiseless_vis_filename == '':
-          sstream_file = utilities.correct_directory(output_directory) + 'sstream_{}.h5'.format(maps_tag)
+          sstream_file = utilities.get_absolute_path(output_directory) + 'sstream_{}.h5'.format(maps_tag)
 
         else:
-            sstream_file = utilities.correct_directory(output_directory) + noiseless_vis_filename
+            sstream_file = utilities.get_absolute_path(output_directory) + noiseless_vis_filename
 
-        self.data = utilities.get_sstream(btm_directory, sstream_file)
+        self.data = utilities.get_sstream(utilities.get_absolute_path(btm_directory), sstream_file)
         
     def add_noise(self, upchannelized=True, norm_filepath=''):
         '''
@@ -399,7 +399,7 @@ class RealisticVisibilities():
                'ndays': self.ndays}
 
         if upchannelized:
-            norm = np.load(norm_filepath)
+            norm = np.load(utilities.get_absolute_path(norm_filepath))
 
             noisy = noise.NormalizedNoise()
             noisy.setup(self.manager)
@@ -437,7 +437,7 @@ class DirtyMap():
           Whether or not to include the auto-correlation in the computations
         '''
 
-        self.btm_directory = btm_directory
+        self.btm_directory = utilities.get_absolute_path(btm_directory)
 
         self.manager = utilities.get_manager(btm_directory)
         self.data = data
@@ -445,7 +445,7 @@ class DirtyMap():
         self.dict_mask = {'auto_correlations': auto_correlation}
         self.dict_map = {'nside': nside}
 
-        self.output_filepath = output_filepath
+        self.output_filepath = utilities.get_absolute_path(output_filepath)
 
         self.fstate = fstate
 
@@ -485,7 +485,8 @@ class DirtyMap():
 
 def load_map(map_path):
     '''helper function to load a single map'''
-    f = h5py.File(map_path)
+    full_file_path = utilities.get_absolute_path(map_path)
+    f = h5py.File(full_file_path)
     sky_map = np.array(f['map'])
     ff = np.array(f['index_map']['freq'])
     freqs = np.array([ii[0] for ii in ff])
