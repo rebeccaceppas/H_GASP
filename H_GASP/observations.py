@@ -496,8 +496,7 @@ class DirtyMap():
 
 def load_map(map_path):
     '''helper function to load a single map'''
-    full_file_path = utilities.get_absolute_path(map_path)
-    f = h5py.File(full_file_path)
+    f = h5py.File(map_path)
     sky_map = np.array(f['map'])
     ff = np.array(f['index_map']['freq'])
     freqs = np.array([ii[0] for ii in ff])
