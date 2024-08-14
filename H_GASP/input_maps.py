@@ -21,7 +21,7 @@ class HIGalaxies():
         - nfreq: <int>
           number of frequencies
         '''
-        self.catalog = utilities.get_absolute_path(catalog_path)
+        self.catalog = catalog_path
         self.f_start = f_start
         self.f_end = f_end
         self.nfreq = nfreq
