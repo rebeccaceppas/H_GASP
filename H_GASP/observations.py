@@ -346,7 +346,7 @@ class RealisticVisibilities():
 
     '''Class for adding noise to pristine visibilities.'''
 
-    def __init__(self, ndays, btm_directory, output_directory, maps_tag, Tsys=30):
+    def __init__(self, ndays, btm_directory, output_directory, maps_tag='', noiseless_vis_filename='', Tsys=30):
         '''
         - ndays: <float>
           number of days of observation
@@ -364,7 +364,12 @@ class RealisticVisibilities():
         self.ndays = ndays
         self.tsys = Tsys
 
-        sstream_file = utilities.correct_directory(output_directory) + 'sstream_{}.h5'.format(maps_tag)
+        if noiseless_vis_filename == '':
+          sstream_file = utilities.correct_directory(output_directory) + 'sstream_{}.h5'.format(maps_tag)
+
+        else:
+            sstream_file = utilities.correct_directory(output_directory) + noiseless_vis_filename
+
         self.data = utilities.get_sstream(btm_directory, sstream_file)
         
     def add_noise(self, upchannelized=True, norm_filepath=''):

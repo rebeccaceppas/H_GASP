@@ -28,7 +28,7 @@ output_directory = '/home/rebeccac/scratch/H_GASP/tutorials/full_run/'
 
 U = 2
 
-compute_R = True  # whether you need to compute R and norm for up-channelization
+compute_R = False  # whether you need to compute R and norm for up-channelization
                   # if they have already been compute this script will just straight
                   # to performing the up-channelization
 
@@ -101,7 +101,7 @@ visdata = vis.get_visibilities()
 
 ############# adding noise and calibration errors ##############
 
-real_vis_obs = obs.RealisticVisibilities(ndays, btm_directory, output_directory, maps_tag)    
+real_vis_obs = obs.RealisticVisibilities(ndays, btm_directory, output_directory, noiseless_vis_filename='sstream_HIcatalog_foregrounds.h5')    
 noisy_visdata = real_vis_obs.add_noise(upchannelized=True,
                                   norm_filepath=output_directory+norm_filename)
 
