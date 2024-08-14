@@ -109,8 +109,9 @@ noisy_visdata = real_vis_obs.add_noise(upchannelized=True,
 
 dirty_map_filename = 'dirty_map.h5'
 
-dm = obs.DirtyMap(visdata,                         # if you want the dirty map of the noiseless visibilities
-                  output_directory+dirty_map_filename,   # pass visdata as the argument instead
+dm = obs.DirtyMap(noisy_visdata,                         # if you want the dirty map of the noiseless visibilities
+                  output_directory,                      # pass visdata as the argument instead
+                  dirty_map_filename,   
                   fstate, nside, btm_directory)
 
 dm.get_dirty_map()

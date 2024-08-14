@@ -64,7 +64,8 @@ visdata = vis.get_visibilities()
 dirty_map_filename = 'synthesized_beam_RA180_DEC45.h5'
 
 dm = obs.DirtyMap(visdata,                         
-                  output_directory+dirty_map_filename,   
+                  output_directory,
+                  dirty_map_filename,   
                   fstate, nside, btm_directory)
 
 dm.get_dirty_map()

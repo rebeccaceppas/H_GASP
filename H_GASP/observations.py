@@ -417,13 +417,15 @@ class RealisticVisibilities():
 
 class DirtyMap():
 
-    def __init__(self, data, output_filepath, fstate, nside, btm_directory, auto_correlation=True):
+    def __init__(self, data, output_directory, output_filename, fstate, nside, btm_directory, auto_correlation=True):
         '''
         - data: <sstream container>
           The visibility data as output from Visibilities(), RealisticVisibilities().
           It can also be obtained for a pre-computed visibility matrix with H_GASP.utilities.get_sstream()
-        - output_filepath: <str>
-          Path and name to which we save the computed dirty map
+        - output_directory: <str>
+          The path and directory onto which we save the dirty map
+        - output_filename: <str>
+          The name with which to save the output file
         - fstate: <FreqState object>
           From H_GASP.frequencies.FreqState(), contains information about the frequency specifications
           This is required to agree with the setting of your beam transfer matrices, so
@@ -445,7 +447,9 @@ class DirtyMap():
         self.dict_mask = {'auto_correlations': auto_correlation}
         self.dict_map = {'nside': nside}
 
-        self.output_filepath = utilities.get_absolute_path(output_filepath)
+        self.output_filepath = utilities.get_absolute_path(output_directory)
+
+        self.output_filename = output_filename
 
         self.fstate = fstate
 
@@ -477,7 +481,7 @@ class DirtyMap():
         m = dm.process(self.mmodes)
 
         map_ = m['map'][:]
-        savetools.write_map(self.output_filepath, 
+        savetools.write_map(self.output_filepath + self.output_filename, 
                   map_, self.fstate.frequencies, self.fstate.freq_width, 
                   include_pol=True)
 
