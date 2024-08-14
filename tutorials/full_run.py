@@ -28,7 +28,7 @@ output_directory = '/home/rebeccac/scratch/H_GASP/tutorials/full_run/'
 
 U = 2
 
-compute_R = False  # whether you need to compute R and norm for up-channelization
+compute_R = True  # whether you need to compute R and norm for up-channelization
                   # if they have already been compute this script will just straight
                   # to performing the up-channelization
 
