@@ -141,6 +141,8 @@ class SynthesizedBeam():
         fstate = fr.FreqState()
         fstate.freq = (self.f_start, self.f_end, self.nfreq)
 
+        utilities.check_create_directory(output_directory)
+
         output_directory = utilities.get_absolute_path(output_directory)
 
         temps = np.ones(self.nfreq)*T_brightness
