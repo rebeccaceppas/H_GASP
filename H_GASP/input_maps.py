@@ -28,7 +28,7 @@ class HIGalaxies():
 
         self.pol = "full"
 
-    def get_map(self, nside, output_filepath, ngals=None, ras=[], decs=[], T_brightness=[], max_baseline=77, seed=0):
+    def get_map(self, nside, output_directory, output_filename, ngals=None, ras=[], decs=[], T_brightness=[], max_baseline=77, seed=0):
         '''
         Creates an input map with the desired HI galaxies from the catalog
 
@@ -36,8 +36,10 @@ class HIGalaxies():
         ------
         - nside: <int>
           defining the resolution of the created healpix map. nside = 2^n.
-        - output_filepath: <str>
-          path and filename to which we save the input maps.
+        - output_directory: <str>
+          The path and directory onto which we save the dirty map
+        - output_filename: <str>
+          The name with which to save the output file
         - ngals: <int>
           number of galaxies to inject into the map.
           default is None which injects all galaxies from the catalog.
@@ -95,12 +97,16 @@ class HIGalaxies():
 
             resampled_profiles = resampled_profiles * np.array(T_brightness).reshape((ngals, -1)) / np.max(resampled_profiles, axis=1).reshape((ngals, -1))
 
+        utilities.check_create_directory(output_directory)
+
+        filename = utilities.get_absolute_path(output_directory) + output_filename
+
         savetools.map_catalog(fstate,
                     resampled_profiles,
                     nside,
                     self.pol,
                     ra, dec,
-                    filename=output_filepath,
+                    filename=filename,
                     write=True)
 
 class SynthesizedBeam():
@@ -177,6 +183,9 @@ class Foregrounds():
         self.f_end = f_end
         self.nfreq = nfreq
         self.nside = nside
+
+        utilities.check_create_directory(output_directory)
+
         self.output_directory = utilities.get_absolute_path(output_directory)
         self.pol = 'full'
 

@@ -46,7 +46,7 @@ ndays = 100
 catalog_filepath = '/home/rebeccac/scratch/H_GASP/resources/HIMF_dec45_VolLim_10000.txt'
 HIgals_filename = 'HI_gals.h5'
 hi_gals = im.HIGalaxies(catalog_filepath, fmax, fmin, nfreq)
-hi_gals.get_map(nside, output_directory+HIgals_filename)
+hi_gals.get_map(nside, output_directory, HIgals_filename)
 
 
 components = ['foreground', '21cm']
