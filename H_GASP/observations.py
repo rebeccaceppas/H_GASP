@@ -404,7 +404,7 @@ class RealisticVisibilities():
                'ndays': self.ndays}
 
         if upchannelized:
-            norm = np.load(utilities.get_absolute_path(norm_filepath))
+            norm = np.load(norm_filepath)
 
             noisy = noise.NormalizedNoise()
             noisy.setup(self.manager)
