@@ -83,7 +83,7 @@ class HIGalaxies():
 
         for i in range(len(V)):
             resamp = np.interp(fstate.frequencies, freqs[i][::-1], temps[i][::-1])
-            
+
             # very computational artefacts only, set to 0
             if np.all(resamp.value < 1e-15) :
                 resampled_profiles[i] = np.zeros_like(resamp)
@@ -94,8 +94,10 @@ class HIGalaxies():
             ra, dec = ras, decs
 
         if len(T_brightness) > 0:
-
-            resampled_profiles = resampled_profiles * np.array(T_brightness).reshape((ngals, -1)) / np.max(resampled_profiles, axis=1).reshape((ngals, -1))
+            for i in range(len(resampled_profiles)):
+                if np.max(resampled_profiles[i]) != 0:
+                    resampled_profiles[i] = resampled_profiles[i] * T_brightness[i] / np.max(resampled_profiles[i])
+                
 
         utilities.check_create_directory(output_directory)
 
